@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 215 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 10%;
+    --primary: 186 72% 42%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 214 20% 92%;
+    --secondary-foreground: 215 25% 15%;
+    --muted: 214 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 214 20% 93%;
+    --accent-foreground: 215 25% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 186 72% 42%;
+    --radius: 0.5rem;
+    --sidebar: 214 20% 95%;
+    --sidebar-foreground: 215 25% 30%;
+    --sidebar-accent: 214 20% 90%;
+    --sidebar-accent-foreground: 186 72% 35%;
+    --sidebar-border: 214 20% 88%;
+    --chart-1: 186 72% 42%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 280 60% 55%;
+    --chart-4: 40 80% 55%;
+    --chart-5: 0 72% 55%;
+  }
+
+  .dark {
+    --background: 220 25% 6%;
+    --foreground: 213 20% 85%;
+    --card: 218 25% 8%;
+    --card-foreground: 213 20% 85%;
+    --popover: 218 28% 10%;
+    --popover-foreground: 213 20% 85%;
+    --primary: 186 72% 42%;
+    --primary-foreground: 220 25% 4%;
+    --secondary: 215 25% 14%;
+    --secondary-foreground: 213 20% 75%;
+    --muted: 215 25% 12%;
+    --muted-foreground: 215 16% 50%;
+    --accent: 215 25% 14%;
+    --accent-foreground: 213 20% 85%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 215 22% 14%;
+    --input: 215 22% 16%;
+    --ring: 186 72% 42%;
+    --sidebar: 220 30% 5%;
+    --sidebar-foreground: 213 18% 55%;
+    --sidebar-accent: 215 25% 10%;
+    --sidebar-accent-foreground: 186 72% 55%;
+    --sidebar-border: 215 22% 12%;
+    --chart-1: 186 72% 50%;
+    --chart-2: 160 60% 50%;
+    --chart-3: 280 55% 60%;
+    --chart-4: 40 80% 60%;
+    --chart-5: 0 65% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Outfit', system-ui, sans-serif;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+@layer utilities {
+  .font-mono-data {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(56, 189, 198, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56, 189, 198, 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .scan-line {
+    position: relative;
+    overflow: hidden;
+  }
+  .scan-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(186 72% 42% / 0.4), transparent);
+    animation: scan 4s linear infinite;
+  }
+  @keyframes scan {
+    0% { top: 0; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  .glow-teal {
+    box-shadow: 0 0 20px -5px hsl(186 72% 42% / 0.3);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px hsl(186 72% 42% / 0.5);
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide-in-left {
+    animation: slideInLeft 0.2s ease-out;
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .pulse-dot {
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+}

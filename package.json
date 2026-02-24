@@ -1,0 +1,22 @@
+{
+  "name": "teamspeak-6-webui",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r run dev",
+    "dev:backend": "pnpm --filter @ts6/backend run dev",
+    "dev:frontend": "pnpm --filter @ts6/frontend run dev",
+    "build": "pnpm -r run build",
+    "db:generate": "pnpm --filter @ts6/backend exec prisma generate",
+    "db:migrate": "pnpm --filter @ts6/backend exec prisma migrate dev",
+    "db:seed": "pnpm --filter @ts6/backend exec prisma db seed",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

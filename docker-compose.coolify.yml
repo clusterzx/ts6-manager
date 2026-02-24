@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    image: clusterzx/ts6-manager:backend
+    container_name: ts6-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=file:/app/packages/backend/data/ts6webui.db
+      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters-long}
+      - JWT_ACCESS_EXPIRY=15m
+      - JWT_REFRESH_EXPIRY=7d
+      - FRONTEND_URL=${FRONTEND_URL:-https://ts6.example.com}
+      - MUSIC_DIR=/data/music
+    volumes:
+      - backend-data:/app/packages/backend/data
+      - music-data:/data/music
+    networks:
+      - ts6-network
+      - coolify-ts
+
+  frontend:
+    image: clusterzx/ts6-manager:frontend
+    container_name: ts6-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - ts6-network
+
+volumes:
+  backend-data:
+  music-data:
+
+networks:
+  ts6-network:
+    driver: bridge
+  coolify-ts:
+    external: true
+    name: h4c0kkoccks8sw8woow88o84

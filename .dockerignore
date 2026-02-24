@@ -1,0 +1,8 @@
+**/node_modules/
+**/dist/
+**/generated/
+**/.env
+**/*.db
+.git/
+.claude/
+.vscode/

@@ -1,0 +1,52 @@
+{
+  "name": "@ts6/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ts6/common": "workspace:*",
+    "@prisma/client": "^6.3.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "axios": "^1.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "ws": "^8.18.0",
+    "ssh2": "^1.16.0",
+    "node-cron": "^3.0.3",
+    "express-rate-limit": "^7.4.0",
+    "zod": "^3.23.0",
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.0",
+    "dotenv": "^16.4.0",
+    "expr-eval": "^2.0.2",
+    "libsodium-wrappers-sumo": "^0.8.2",
+    "opusscript": "^0.1.1",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@types/multer": "^1.4.12",
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/ws": "^8.5.12",
+    "@types/ssh2": "^1.15.1",
+    "@types/node-cron": "^3.0.11",
+    "@types/node": "^22.0.0",
+    "prisma": "^6.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.4.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

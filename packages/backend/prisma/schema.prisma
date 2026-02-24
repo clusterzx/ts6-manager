@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  passwordHash String
+  displayName  String
+  role         String    @default("viewer")
+  enabled      Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+
+  serverAccess  UserServerAccess[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model UserServerAccess {
+  id             Int            @id @default(autoincrement())
+  userId         Int
+  serverConfigId Int
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serverConfig   TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverConfigId])
+}
+
+model TsServerConfig {
+  id           Int      @id @default(autoincrement())
+  name         String
+  host         String
+  webqueryPort Int      @default(10080)
+  apiKey       String
+  useHttps     Boolean  @default(false)
+  sshPort      Int      @default(10022)
+  sshUsername  String?
+  sshPassword  String?
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userAccess    UserServerAccess[]
+  botFlows      BotFlow[]
+  botLogs       BotExecutionLog[]
+  musicBots     MusicBot[]
+  songs         Song[]
+  radioStations RadioStation[]
+}
+
+model BotFlow {
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String?
+  flowData        String   @default("{\"nodes\":[],\"edges\":[]}")
+  serverConfigId  Int
+  virtualServerId Int      @default(1)
+  serverConfig    TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
+  enabled         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  executions BotExecution[]
+  variables  BotVariable[]
+}
+
+model BotVariable {
+  id     Int     @id @default(autoincrement())
+  flowId Int
+  flow   BotFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  name   String
+  value  String  @default("")
+  scope  String  @default("flow")
+
+  @@unique([flowId, name, scope])
+}
+
+model BotExecution {
+  id          Int       @id @default(autoincrement())
+  flowId      Int
+  flow        BotFlow   @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  triggeredBy String
+  triggerData String?
+  status      String    @default("running")
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  error       String?
+
+  logs BotExecutionLog[]
+}
+
+model BotExecutionLog {
+  id             Int            @id @default(autoincrement())
+  executionId    Int?
+  execution      BotExecution?  @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  serverConfigId Int
+  serverConfig   TsServerConfig @relation(fields: [serverConfigId], references: [id])
+  flowId         Int?
+  nodeId         String?
+  nodeName       String?
+  level          String         @default("info")
+  message        String
+  data           String?
+  timestamp      DateTime       @default(now())
+
+  @@index([executionId])
+  @@index([flowId])
+  @@index([timestamp])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// === Music / Voice Bot Models ===
+
+model MusicBot {
+  id              Int       @id @default(autoincrement())
+  name            String
+  serverConfigId  Int
+  serverConfig    TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
+  nickname        String    @default("MusicBot")
+  defaultChannel  String?
+  channelPassword String?
+  volume          Int       @default(50)
+  identityData    String?
+  autoStart       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  playlists Playlist[]
+}
+
+model Song {
+  id              Int       @id @default(autoincrement())
+  title           String
+  artist          String?
+  duration        Float?
+  filePath        String
+  source          String    @default("local")
+  sourceUrl       String?
+  fileSize        Int?
+  serverConfigId  Int
+  serverConfig    TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+
+  playlistSongs PlaylistSong[]
+}
+
+model Playlist {
+  id         Int       @id @default(autoincrement())
+  name       String
+  musicBotId Int?
+  musicBot   MusicBot? @relation(fields: [musicBotId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now())
+
+  songs PlaylistSong[]
+}
+
+model PlaylistSong {
+  id         Int      @id @default(autoincrement())
+  playlistId Int
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  songId     Int
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  position   Int      @default(0)
+
+  @@unique([playlistId, songId])
+}
+
+model RadioStation {
+  id             Int            @id @default(autoincrement())
+  name           String
+  url            String
+  genre          String?
+  imageUrl       String?
+  serverConfigId Int
+  serverConfig   TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+}
