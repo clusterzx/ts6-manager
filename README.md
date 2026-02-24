@@ -6,6 +6,28 @@ Built on the **WebQuery HTTP API** (the ServerQuery replacement in modern TeamSp
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+## Screenshots
+
+### Dashboard
+Live overview of your server: online users, channel count, uptime, ping, bandwidth graph, and server capacity at a glance.
+
+![Dashboard](docs/dashboard.png)
+
+### Music Bots
+Run multiple music bots per server. Each bot has its own queue, volume control, and playback state. Supports radio streams, YouTube, and a local music library. Users in the bot's channel can control it via text commands (`!radio`, `!play`, `!vol`, etc.).
+
+![Music Bots](docs/musicbots.png)
+
+### Bot Flow Engine
+Visual node-based editor for building automated server workflows. Drag triggers, conditions, and actions onto the canvas, connect them, and deploy. Supports TS3 events, cron schedules, webhooks, and chat commands as triggers.
+
+![Flow Editor](docs/flow-editor.png)
+
+### Flow Templates
+Get started quickly with pre-built flow templates. Covers common use cases like temporary channel creation, AFK movers, idle kickers, online counters, and group protection. One click to import, then customize to your needs.
+
+![Flow Templates](docs/flow-templates.png)
+
 ## Features
 
 **Server Management**
@@ -37,6 +59,7 @@ Built on the **WebQuery HTTP API** (the ServerQuery replacement in modern TeamSp
 - Conditions, variables, delays, loops, logging
 - Animated channel names (rotating text on a timer)
 - Placeholder system with filters and expressions
+- Pre-built templates for common automation tasks
 
 ## Architecture
 
