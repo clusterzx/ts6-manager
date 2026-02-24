@@ -96,13 +96,11 @@ The backend proxies all TeamSpeak API calls. The frontend never has direct acces
 
 ## Quick Start (Docker)
 
+1. Download the [`docker-compose.yml`](docker-compose.yml)
+2. Set a JWT secret and start:
+
 ```bash
-git clone https://github.com/clusterzx/ts6-manager.git
-cd ts6-manager
-
-# Set a real secret before deploying
 export JWT_SECRET=$(openssl rand -base64 32)
-
 docker compose up -d
 ```
 
@@ -111,11 +109,14 @@ Backend API: `http://localhost:3001`
 
 On first launch, register an admin account through the UI, then add your TeamSpeak server connection (host, WebQuery port, API key).
 
-### Pre-built Images
+### Building from Source
+
+If you prefer to build locally instead of using the pre-built images:
 
 ```bash
-docker pull clusterzx/ts6-manager:frontend
-docker pull clusterzx/ts6-manager:backend
+git clone https://github.com/clusterzx/ts6-manager.git
+cd ts6-manager
+docker compose -f docker-compose.local.yml up -d --build
 ```
 
 ### Coolify / Reverse Proxy
