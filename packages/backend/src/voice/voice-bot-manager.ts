@@ -56,6 +56,7 @@ export class VoiceBotManager extends EventEmitter {
         serverHost: dbBot.serverConfig.host,
         serverPort: 9987, // Default TS3 voice port
         nickname: dbBot.nickname,
+        serverPassword: dbBot.serverPassword ?? undefined,
         defaultChannel: dbBot.defaultChannel ?? undefined,
         channelPassword: dbBot.channelPassword ?? undefined,
         volume: dbBot.volume,
@@ -134,6 +135,7 @@ export class VoiceBotManager extends EventEmitter {
     name: string;
     serverConfigId: number;
     nickname?: string;
+    serverPassword?: string;
     defaultChannel?: string;
     channelPassword?: string;
     volume?: number;
@@ -162,6 +164,7 @@ export class VoiceBotManager extends EventEmitter {
         name: data.name,
         serverConfigId: data.serverConfigId,
         nickname: data.nickname ?? 'MusicBot',
+        serverPassword: data.serverPassword,
         defaultChannel: data.defaultChannel,
         channelPassword: data.channelPassword,
         volume: data.volume ?? 50,
@@ -176,6 +179,7 @@ export class VoiceBotManager extends EventEmitter {
       serverHost: serverConfig.host,
       serverPort: 9987,
       nickname: dbBot.nickname,
+      serverPassword: dbBot.serverPassword ?? undefined,
       defaultChannel: dbBot.defaultChannel ?? undefined,
       channelPassword: dbBot.channelPassword ?? undefined,
       volume: dbBot.volume,

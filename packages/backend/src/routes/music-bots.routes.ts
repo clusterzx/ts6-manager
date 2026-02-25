@@ -67,13 +67,14 @@ musicBotRoutes.get('/:id', async (req: Request, res: Response, next) => {
 musicBotRoutes.post('/', async (req: Request, res: Response, next) => {
   try {
     const manager: VoiceBotManager = req.app.locals.voiceBotManager;
-    const { name, serverConfigId, nickname, defaultChannel, channelPassword, volume, autoStart } = req.body;
+    const { name, serverConfigId, nickname, serverPassword, defaultChannel, channelPassword, volume, autoStart } = req.body;
     if (!name || !serverConfigId) throw new AppError(400, 'name and serverConfigId are required');
 
     const result = await manager.createBot({
       name,
       serverConfigId: parseInt(serverConfigId),
       nickname,
+      serverPassword,
       defaultChannel,
       channelPassword,
       volume: volume != null ? parseInt(volume) : undefined,
@@ -90,13 +91,14 @@ musicBotRoutes.put('/:id', async (req: Request, res: Response, next) => {
     const prisma = req.app.locals.prisma;
     const manager: VoiceBotManager = req.app.locals.voiceBotManager;
     const id = parseInt(req.params.id as string);
-    const { name, nickname, defaultChannel, channelPassword, volume, autoStart } = req.body;
+    const { name, nickname, serverPassword, defaultChannel, channelPassword, volume, autoStart } = req.body;
 
     const dbBot = await prisma.musicBot.update({
       where: { id },
       data: {
         ...(name != null && { name }),
         ...(nickname != null && { nickname }),
+        ...(serverPassword !== undefined && { serverPassword }),
         ...(defaultChannel !== undefined && { defaultChannel }),
         ...(channelPassword !== undefined && { channelPassword }),
         ...(volume != null && { volume: parseInt(volume) }),
@@ -110,6 +112,7 @@ musicBotRoutes.put('/:id', async (req: Request, res: Response, next) => {
       bot.updateConfig({
         ...(name != null && { name }),
         ...(nickname != null && { nickname }),
+        ...(serverPassword !== undefined && { serverPassword: serverPassword || undefined }),
         ...(defaultChannel !== undefined && { defaultChannel: defaultChannel || undefined }),
         ...(channelPassword !== undefined && { channelPassword: channelPassword || undefined }),
         ...(volume != null && { volume: parseInt(volume) }),

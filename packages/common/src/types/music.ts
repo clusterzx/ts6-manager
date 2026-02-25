@@ -8,7 +8,9 @@ export interface MusicBotSummary {
   serverConfigId: number;
   serverConfig?: { id: number; name: string; host: string };
   nickname: string;
+  serverPassword: string | null;
   defaultChannel: string | null;
+  channelPassword: string | null;
   volume: number;
   autoStart: boolean;
   status: VoiceBotStatus;
@@ -17,7 +19,6 @@ export interface MusicBotSummary {
 }
 
 export interface MusicBotDetail extends MusicBotSummary {
-  channelPassword: string | null;
   updatedAt: string;
   playbackProgress: { position: number; duration: number } | null;
 }
@@ -26,6 +27,7 @@ export interface CreateMusicBotRequest {
   name: string;
   serverConfigId: number;
   nickname?: string;
+  serverPassword?: string;
   defaultChannel?: string;
   channelPassword?: string;
   volume?: number;
@@ -35,6 +37,7 @@ export interface CreateMusicBotRequest {
 export interface UpdateMusicBotRequest {
   name?: string;
   nickname?: string;
+  serverPassword?: string;
   defaultChannel?: string;
   channelPassword?: string;
   volume?: number;

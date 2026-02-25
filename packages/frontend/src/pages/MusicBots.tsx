@@ -422,7 +422,7 @@ function BotsTab() {
 
   // Create form
   const [form, setForm] = useState({
-    name: '', serverConfigId: '', nickname: 'MusicBot', defaultChannel: '', volume: 50, autoStart: false,
+    name: '', serverConfigId: '', nickname: 'MusicBot', serverPassword: '', defaultChannel: '', channelPassword: '', volume: 50, autoStart: false,
   });
 
   const bots = Array.isArray(data) ? data : [];
@@ -437,7 +437,9 @@ function BotsTab() {
       name: form.name,
       serverConfigId: configId,
       nickname: form.nickname || 'MusicBot',
+      serverPassword: form.serverPassword || undefined,
       defaultChannel: form.defaultChannel || undefined,
+      channelPassword: form.channelPassword || undefined,
       volume: form.volume,
       autoStart: form.autoStart,
     }, {
@@ -451,7 +453,9 @@ function BotsTab() {
     updateBot.mutate({ id: editBot.id, data: {
       name: form.name,
       nickname: form.nickname,
+      serverPassword: form.serverPassword || undefined,
       defaultChannel: form.defaultChannel || undefined,
+      channelPassword: form.channelPassword || undefined,
       volume: form.volume,
       autoStart: form.autoStart,
     }}, {
@@ -460,7 +464,7 @@ function BotsTab() {
     });
   };
 
-  const resetForm = () => setForm({ name: '', serverConfigId: '', nickname: 'MusicBot', defaultChannel: '', volume: 50, autoStart: false });
+  const resetForm = () => setForm({ name: '', serverConfigId: '', nickname: 'MusicBot', serverPassword: '', defaultChannel: '', channelPassword: '', volume: 50, autoStart: false });
 
   return (
     <div className="space-y-4">
@@ -484,7 +488,9 @@ function BotsTab() {
                   name: bot.name,
                   serverConfigId: String(bot.serverConfigId),
                   nickname: bot.nickname,
+                  serverPassword: bot.serverPassword || '',
                   defaultChannel: bot.defaultChannel || '',
+                  channelPassword: bot.channelPassword || '',
                   volume: bot.volume,
                   autoStart: bot.autoStart,
                 });
@@ -524,8 +530,16 @@ function BotsTab() {
               <Input value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="MusicBot" />
             </div>
             <div>
+              <Label className="text-xs">Server Password</Label>
+              <Input type="password" value={form.serverPassword} onChange={(e) => setForm({ ...form, serverPassword: e.target.value })} placeholder="Leave empty if none" />
+            </div>
+            <div>
               <Label className="text-xs">Default Channel</Label>
               <Input value={form.defaultChannel} onChange={(e) => setForm({ ...form, defaultChannel: e.target.value })} placeholder="Channel name or ID (optional)" />
+            </div>
+            <div>
+              <Label className="text-xs">Channel Password</Label>
+              <Input type="password" value={form.channelPassword} onChange={(e) => setForm({ ...form, channelPassword: e.target.value })} placeholder="Leave empty if none" />
             </div>
             <div>
               <Label className="text-xs">Volume ({form.volume}%)</Label>

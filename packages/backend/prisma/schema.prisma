@@ -138,6 +138,7 @@ model MusicBot {
   serverConfigId  Int
   serverConfig    TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
   nickname        String    @default("MusicBot")
+  serverPassword  String?
   defaultChannel  String?
   channelPassword String?
   volume          Int       @default(50)
