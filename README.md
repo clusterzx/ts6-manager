@@ -120,28 +120,39 @@ The backend proxies all TeamSpeak API calls. The frontend never has direct acces
 ## Quick Start (Docker)
 
 1. Download the [`docker-compose.yml`](docker-compose.yml)
-2. Generate a JWT secret and start:
+2. Create a `.env` file next to it:
+
+```env
+JWT_SECRET=your-random-secret-at-least-32-characters
+ENCRYPTION_KEY=another-random-secret-for-credential-encryption
+```
+
+Generate secure values:
 
 ```bash
-export JWT_SECRET=$(openssl rand -base64 32)
+echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
+echo "ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
+```
+
+3. Start the stack:
+
+```bash
 docker compose up -d
 ```
 
-3. Open `http://localhost:3000/setup` and create your admin account
-4. Log in, then add your TeamSpeak server connection under **Settings → Connections** (host, WebQuery port, API key)
+4. Open `http://localhost:3000/setup` and create your admin account
+5. Log in, then add your TeamSpeak server connection under **Settings → Connections** (host, WebQuery port, API key)
 
-Optionally set `ENCRYPTION_KEY` for dedicated credential encryption (falls back to `JWT_SECRET` if not set):
-
-```bash
-export ENCRYPTION_KEY=$(openssl rand -base64 32)
-```
+> `JWT_SECRET` is **required** — the backend will refuse to start in production without it.
+> `ENCRYPTION_KEY` is optional but recommended — if not set, `JWT_SECRET` is used as fallback for credential encryption.
 
 ### Building from Source
 
 ```bash
 git clone https://github.com/clusterzx/ts6-manager.git
 cd ts6-manager
-export JWT_SECRET=$(openssl rand -base64 32)
+echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
+echo "ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
 docker compose -f docker-compose.local.yml up -d --build
 ```
 
