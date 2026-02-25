@@ -1,11 +1,14 @@
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useServerStore } from '@/stores/server.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { PageLoader } from '@/components/shared/LoadingSpinner';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { WidgetManagerModal } from '@/components/widget/WidgetManagerModal';
 import { formatBytes, formatUptime } from '@/lib/utils';
-import { Users, Activity, Clock, Hash, ArrowDownToLine, ArrowUpFromLine, Wifi, Server } from 'lucide-react';
+import { Users, Activity, Clock, Hash, ArrowDownToLine, ArrowUpFromLine, Wifi, Server, LayoutGrid } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer } from 'recharts';
 import { useState, useEffect } from 'react';
 
@@ -40,7 +43,9 @@ function StatsCard({ icon: Icon, label, value, sub, accentColor = 'text-primary'
 export default function Dashboard() {
   const { selectedConfigId, selectedSid } = useServerStore();
   const { data, isLoading, error } = useDashboard();
+  const isAdmin = useAuthStore((s) => s.isAdmin());
   const [bandwidthHistory, setBandwidthHistory] = useState<any[]>([]);
+  const [showWidgets, setShowWidgets] = useState(false);
 
   // Build bandwidth history from periodic data
   useEffect(() => {
@@ -91,11 +96,18 @@ export default function Dashboard() {
             <span className="text-xs text-muted-foreground font-mono-data">{data.version} / {data.platform}</span>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] text-muted-foreground font-mono-data uppercase tracking-widest">Live Monitoring</p>
-          <div className="flex items-center gap-1 justify-end mt-0.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 pulse-dot" />
-            <span className="text-[10px] text-emerald-400 font-mono-data">ACTIVE</span>
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <Button size="sm" variant="outline" onClick={() => setShowWidgets(true)}>
+              <LayoutGrid className="h-3.5 w-3.5 mr-1.5" /> Widgets
+            </Button>
+          )}
+          <div className="text-right">
+            <p className="text-[10px] text-muted-foreground font-mono-data uppercase tracking-widest">Live Monitoring</p>
+            <div className="flex items-center gap-1 justify-end mt-0.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 pulse-dot" />
+              <span className="text-[10px] text-emerald-400 font-mono-data">ACTIVE</span>
+            </div>
           </div>
         </div>
       </div>
@@ -230,6 +242,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <WidgetManagerModal open={showWidgets} onOpenChange={setShowWidgets} />
     </div>
   );
 }

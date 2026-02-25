@@ -200,3 +200,68 @@ export interface PaginatedResponse<T> {
   offset: number;
   limit: number;
 }
+
+// === Server Widget / Banner ===
+
+export type WidgetTheme = 'dark' | 'light' | 'transparent' | 'neon' | 'military' | 'minimal';
+
+export interface WidgetConfig {
+  id: number;
+  name: string;
+  token: string;
+  serverConfigId: number;
+  virtualServerId: number;
+  theme: WidgetTheme;
+  showChannelTree: boolean;
+  showClients: boolean;
+  maxChannelDepth: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWidgetRequest {
+  name: string;
+  serverConfigId: number;
+  virtualServerId?: number;
+  theme?: WidgetTheme;
+  showChannelTree?: boolean;
+  showClients?: boolean;
+  maxChannelDepth?: number;
+}
+
+export interface UpdateWidgetRequest {
+  name?: string;
+  theme?: WidgetTheme;
+  showChannelTree?: boolean;
+  showClients?: boolean;
+  maxChannelDepth?: number;
+}
+
+export interface WidgetData {
+  serverName: string;
+  onlineUsers: number;
+  maxClients: number;
+  uptime: number;
+  platform: string;
+  version: string;
+  theme: WidgetTheme;
+  showChannelTree: boolean;
+  showClients: boolean;
+  channelTree: WidgetChannelNode[];
+  fetchedAt: string;
+}
+
+export interface WidgetChannelNode {
+  cid: number;
+  name: string;
+  hasPassword: boolean;
+  clients: WidgetClient[];
+  children: WidgetChannelNode[];
+}
+
+export interface WidgetClient {
+  clid: number;
+  nickname: string;
+  isAway: boolean;
+  isMuted: boolean;
+}

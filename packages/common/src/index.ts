@@ -5,3 +5,4 @@ export * from './types/auth.js';
 export * from './types/music.js';
 export * from './constants/events.js';
 export * from './utils/ts-escape.js';
+export * from './widget-themes.js';

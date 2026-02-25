@@ -26,6 +26,8 @@ import { musicBotRoutes } from './routes/music-bots.routes.js';
 import { musicLibraryRoutes } from './routes/music-library.routes.js';
 import { playlistRoutes } from './routes/playlists.routes.js';
 import { radioStationRoutes } from './routes/radio-stations.routes.js';
+import { widgetPublicRoutes } from './routes/widget-public.routes.js';
+import { widgetRoutes } from './routes/widget.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -48,6 +50,9 @@ export function createApp(): Express {
     if (!engine) return res.status(503).json({ error: 'Bot engine not running' });
     engine.handleWebhookRequest(req, res);
   });
+
+  // Public widget routes (unauthenticated — embeddable on external sites)
+  app.use('/api/widget', widgetPublicRoutes);
 
   // Protected routes
   app.use('/api', authMiddleware);
@@ -72,6 +77,7 @@ export function createApp(): Express {
   app.use('/api/servers/:configId/music-library', musicLibraryRoutes);
   app.use('/api/playlists', playlistRoutes);
   app.use('/api/servers/:configId/radio-stations', radioStationRoutes);
+  app.use('/api/widgets', widgetRoutes);
 
   // Error handler (must be last)
   app.use(errorHandler);

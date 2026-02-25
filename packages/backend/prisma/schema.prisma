@@ -62,6 +62,7 @@ model TsServerConfig {
   musicBots     MusicBot[]
   songs         Song[]
   radioStations RadioStation[]
+  widgets       Widget[]
 }
 
 model BotFlow {
@@ -196,4 +197,21 @@ model RadioStation {
   serverConfigId Int
   serverConfig   TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
   createdAt      DateTime       @default(now())
+}
+
+// === Server Widget / Banner ===
+
+model Widget {
+  id              Int            @id @default(autoincrement())
+  name            String
+  token           String         @unique
+  serverConfigId  Int
+  serverConfig    TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
+  virtualServerId Int            @default(1)
+  theme           String         @default("dark")
+  showChannelTree Boolean        @default(true)
+  showClients     Boolean        @default(true)
+  maxChannelDepth Int            @default(5)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }

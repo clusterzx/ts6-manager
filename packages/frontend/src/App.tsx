@@ -42,6 +42,7 @@ const BotEditor = lazy(() => import('@/pages/BotEditor'));
 const MusicBots = lazy(() => import('@/pages/MusicBots'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
+const WidgetPage = lazy(() => import('@/pages/WidgetPage'));
 
 export function App() {
   return (
@@ -50,6 +51,7 @@ export function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/widget/:token" element={<WidgetPage />} />
 
             <Route element={<AppLayout />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
