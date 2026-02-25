@@ -12,9 +12,14 @@ const getSid = (req: Request) => parseInt(String(req.params.sid));
 
 clientRoutes.get('/', async (req: Request, res: Response, next) => {
   try {
-    const result = await getClient(req).execute(getSid(req), 'clientlist', {
-      '-uid': '', '-away': '', '-voice': '', '-times': '', '-groups': '', '-info': '', '-country': '', '-ip': '',
-    });
+    // M2: Only include -ip flag for admin users
+    const flags: Record<string, string> = {
+      '-uid': '', '-away': '', '-voice': '', '-times': '', '-groups': '', '-info': '', '-country': '',
+    };
+    if (req.user?.role === 'admin') {
+      flags['-ip'] = '';
+    }
+    const result = await getClient(req).execute(getSid(req), 'clientlist', flags);
     res.json(result);
   } catch (err) { next(err); }
 });

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
+import { validateUrl } from '../utils/url-validator.js';
 import type { RadioPreset } from '@ts6/common';
 
 export const radioStationRoutes: Router = Router({ mergeParams: true });
@@ -52,6 +53,10 @@ radioStationRoutes.post('/', async (req: Request, res: Response, next) => {
     const configId = parseInt(req.params.configId as string);
     const { name, url, genre, imageUrl } = req.body;
     if (!name || !url) throw new AppError(400, 'name and url are required');
+
+    // C4: Validate radio station URL
+    const urlCheck = await validateUrl(url, { allowedProtocols: ['http:', 'https:'] });
+    if (!urlCheck.valid) throw new AppError(400, `Invalid URL: ${urlCheck.error}`);
 
     const station = await prisma.radioStation.create({
       data: {

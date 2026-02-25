@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import type { PrismaClient } from '../../generated/prisma/index.js';
 import { SshQueryClient } from './ssh-query-client.js';
+import { decrypt } from '../utils/crypto.js';
 
 export declare interface EventBridge {
   on(event: 'tsEvent', listener: (configId: number, sid: number, eventName: string, data: Record<string, string>) => void): this;
@@ -46,7 +47,7 @@ export class EventBridge extends EventEmitter {
       host: serverConfig.host,
       port: serverConfig.sshPort,
       username: serverConfig.sshUsername,
-      password: serverConfig.sshPassword,
+      password: decrypt(serverConfig.sshPassword),
     });
 
     client.on('ready', async () => {

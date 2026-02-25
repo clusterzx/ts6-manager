@@ -322,7 +322,7 @@ export class VoiceBot extends EventEmitter {
     this.startIcyPolling(item.streamUrl);
 
     try {
-      const stream = this.pipeline.toPcmStream(item.streamUrl);
+      const stream = await this.pipeline.toPcmStream(item.streamUrl);
       this.streamKill = stream.kill;
       this.streamBuffer = Buffer.alloc(0);
 

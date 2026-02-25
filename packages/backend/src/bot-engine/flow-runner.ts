@@ -14,6 +14,8 @@ import type {
   ConditionNodeData, DelayNodeData, VariableNodeData, LogNodeData,
 } from '@ts6/common';
 import axios from 'axios';
+import { validateUrl } from '../utils/url-validator.js';
+import { ALLOWED_WEBQUERY_COMMANDS } from './command-whitelist.js';
 
 const MAX_NODE_VISITS = 100;
 const MAX_DELAY_MS = 300000; // 5 minutes
@@ -369,6 +371,11 @@ export class FlowRunner {
       }
     }
 
+    // H7: WebQuery command whitelist
+    if (!ALLOWED_WEBQUERY_COMMANDS.has(command.toLowerCase())) {
+      throw new Error(`WebQuery command "${command}" is not allowed in bot flows`);
+    }
+
     const result = await client.executePost(ctx.sid, command, resolved);
     ctx.setTemp('lastResult', JSON.stringify(result));
     if (data.storeAs && result?.[0]) {
@@ -378,6 +385,13 @@ export class FlowRunner {
 
   private async executeWebhook(data: WebhookActionData, ctx: ExecutionContext): Promise<void> {
     const url = await ctx.resolveTemplate(data.url);
+
+    // C3: SSRF protection
+    const urlCheck = await validateUrl(url);
+    if (!urlCheck.valid) {
+      throw new Error(`Webhook URL blocked: ${urlCheck.error}`);
+    }
+
     const body = data.body ? await ctx.resolveTemplate(data.body) : undefined;
     const headers: Record<string, string> = {};
     if (data.headers) {
@@ -413,6 +427,13 @@ export class FlowRunner {
 
   private async executeHttpRequest(data: HttpRequestActionData, ctx: ExecutionContext): Promise<void> {
     const url = await ctx.resolveTemplate(data.url);
+
+    // C3: SSRF protection
+    const urlCheck = await validateUrl(url);
+    if (!urlCheck.valid) {
+      throw new Error(`HTTP request URL blocked: ${urlCheck.error}`);
+    }
+
     const body = data.body ? await ctx.resolveTemplate(data.body) : undefined;
     const headers: Record<string, string> = {};
     if (data.headers) {

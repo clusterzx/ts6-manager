@@ -1,6 +1,7 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -28,6 +29,8 @@ import { playlistRoutes } from './routes/playlists.routes.js';
 import { radioStationRoutes } from './routes/radio-stations.routes.js';
 import { widgetPublicRoutes } from './routes/widget-public.routes.js';
 import { widgetRoutes } from './routes/widget.routes.js';
+import { setupRoutes } from './routes/setup.routes.js';
+import { requireServerAccess } from './middleware/server-access.js';
 
 export function createApp(): Express {
   const app = express();
@@ -41,7 +44,19 @@ export function createApp(): Express {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // H1: Rate limiting on auth endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 15,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many attempts, please try again later' },
+  });
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/refresh', authLimiter);
+
   // Public routes
+  app.use('/api/setup', setupRoutes);
   app.use('/api/auth', authRoutes);
 
   // Bot webhook route (unauthenticated — called by external systems)
@@ -57,26 +72,29 @@ export function createApp(): Express {
   // Protected routes
   app.use('/api', authMiddleware);
   app.use('/api/servers', serverRoutes);
-  app.use('/api/servers/:configId/virtual-servers', virtualServerRoutes);
-  app.use('/api/servers/:configId/vs/:sid/channels', channelRoutes);
-  app.use('/api/servers/:configId/vs/:sid/clients', clientRoutes);
-  app.use('/api/servers/:configId/vs/:sid/server-groups', serverGroupRoutes);
-  app.use('/api/servers/:configId/vs/:sid/channel-groups', channelGroupRoutes);
-  app.use('/api/servers/:configId/vs/:sid/permissions', permissionRoutes);
-  app.use('/api/servers/:configId/vs/:sid/bans', banRoutes);
-  app.use('/api/servers/:configId/vs/:sid/tokens', tokenRoutes);
-  app.use('/api/servers/:configId/vs/:sid/files', fileRoutes);
-  app.use('/api/servers/:configId/vs/:sid/complaints', complaintRoutes);
-  app.use('/api/servers/:configId/vs/:sid/messages', messageRoutes);
-  app.use('/api/servers/:configId/vs/:sid/logs', logRoutes);
-  app.use('/api/servers/:configId/instance', instanceRoutes);
-  app.use('/api/servers/:configId/vs/:sid/dashboard', dashboardRoutes);
+
+  // H9: Server access control on all :configId routes
+  const serverAccess = requireServerAccess();
+  app.use('/api/servers/:configId/virtual-servers', serverAccess, virtualServerRoutes);
+  app.use('/api/servers/:configId/vs/:sid/channels', serverAccess, channelRoutes);
+  app.use('/api/servers/:configId/vs/:sid/clients', serverAccess, clientRoutes);
+  app.use('/api/servers/:configId/vs/:sid/server-groups', serverAccess, serverGroupRoutes);
+  app.use('/api/servers/:configId/vs/:sid/channel-groups', serverAccess, channelGroupRoutes);
+  app.use('/api/servers/:configId/vs/:sid/permissions', serverAccess, permissionRoutes);
+  app.use('/api/servers/:configId/vs/:sid/bans', serverAccess, banRoutes);
+  app.use('/api/servers/:configId/vs/:sid/tokens', serverAccess, tokenRoutes);
+  app.use('/api/servers/:configId/vs/:sid/files', serverAccess, fileRoutes);
+  app.use('/api/servers/:configId/vs/:sid/complaints', serverAccess, complaintRoutes);
+  app.use('/api/servers/:configId/vs/:sid/messages', serverAccess, messageRoutes);
+  app.use('/api/servers/:configId/vs/:sid/logs', serverAccess, logRoutes);
+  app.use('/api/servers/:configId/instance', serverAccess, instanceRoutes);
+  app.use('/api/servers/:configId/vs/:sid/dashboard', serverAccess, dashboardRoutes);
   app.use('/api/bots', botRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/music-bots', musicBotRoutes);
-  app.use('/api/servers/:configId/music-library', musicLibraryRoutes);
+  app.use('/api/servers/:configId/music-library', serverAccess, musicLibraryRoutes);
   app.use('/api/playlists', playlistRoutes);
-  app.use('/api/servers/:configId/radio-stations', radioStationRoutes);
+  app.use('/api/servers/:configId/radio-stations', serverAccess, radioStationRoutes);
   app.use('/api/widgets', widgetRoutes);
 
   // Error handler (must be last)

@@ -1,5 +1,6 @@
 import { PrismaClient } from '../../generated/prisma/index.js';
 import { WebQueryClient } from './webquery-client.js';
+import { decrypt } from '../utils/crypto.js';
 
 export class ConnectionPool {
   private clients: Map<number, WebQueryClient> = new Map();
@@ -12,7 +13,8 @@ export class ConnectionPool {
     });
 
     for (const server of servers) {
-      this.addClient(server.id, server.host, server.webqueryPort, server.apiKey, server.useHttps);
+      // H8: Decrypt API key before use
+      this.addClient(server.id, server.host, server.webqueryPort, decrypt(server.apiKey), server.useHttps);
     }
 
     console.log(`[ConnectionPool] Initialized ${this.clients.size} server connection(s)`);
@@ -48,7 +50,7 @@ export class ConnectionPool {
       where: { id: configId },
     });
     if (server && server.enabled) {
-      this.addClient(server.id, server.host, server.webqueryPort, server.apiKey, server.useHttps);
+      this.addClient(server.id, server.host, server.webqueryPort, decrypt(server.apiKey), server.useHttps);
     } else {
       this.removeClient(configId);
     }

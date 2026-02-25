@@ -3,6 +3,7 @@ import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
 import { WebQueryClient } from '../ts-client/webquery-client.js';
 import type { ConnectionPool } from '../ts-client/connection-pool.js';
+import { encrypt, decrypt } from '../utils/crypto.js';
 
 export const serverRoutes: Router = Router();
 
@@ -34,22 +35,23 @@ serverRoutes.post('/', requireRole('admin'), async (req: Request, res: Response,
     if (!name || !host || !apiKey) throw new AppError(400, 'Name, host, and API key are required');
 
     const prisma = req.app.locals.prisma;
+    // H8: Encrypt sensitive fields at rest
     const server = await prisma.tsServerConfig.create({
       data: {
         name,
         host,
         webqueryPort: webqueryPort || 10080,
-        apiKey,
+        apiKey: encrypt(apiKey),
         useHttps: useHttps || false,
         sshPort: sshPort || 10022,
         sshUsername: sshUsername || null,
-        sshPassword: sshPassword || null,
+        sshPassword: sshPassword ? encrypt(sshPassword) : null,
       },
     });
 
-    // Add to connection pool
+    // Add to connection pool (use plaintext key for connection)
     const pool: ConnectionPool = req.app.locals.connectionPool;
-    pool.addClient(server.id, server.host, server.webqueryPort, server.apiKey, server.useHttps);
+    pool.addClient(server.id, server.host, server.webqueryPort, apiKey, server.useHttps);
 
     res.status(201).json({ id: server.id, name: server.name });
   } catch (err) { next(err); }
@@ -85,7 +87,12 @@ serverRoutes.put('/:configId', requireRole('admin'), async (req: Request, res: R
       if (req.body[field] !== undefined) {
         // Don't overwrite API key or SSH password with empty strings
         if ((field === 'apiKey' || field === 'sshPassword') && req.body[field] === '') continue;
-        data[field] = req.body[field];
+        // H8: Encrypt sensitive fields
+        if (field === 'apiKey' || field === 'sshPassword') {
+          data[field] = encrypt(req.body[field]);
+        } else {
+          data[field] = req.body[field];
+        }
       }
     }
 
@@ -122,7 +129,7 @@ serverRoutes.post('/:configId/test', requireRole('admin'), async (req: Request, 
     });
     if (!server) throw new AppError(404, 'Server config not found');
 
-    const client = new WebQueryClient(server.host, server.webqueryPort, server.apiKey, server.useHttps);
+    const client = new WebQueryClient(server.host, server.webqueryPort, decrypt(server.apiKey), server.useHttps);
     const ok = await client.testConnection();
     client.destroy(); // Close the temporary TCP connection immediately
 

@@ -7,14 +7,38 @@ import { BotEngine } from './bot-engine/engine.js';
 import { VoiceBotManager } from './voice/voice-bot-manager.js';
 import { MusicCommandHandler } from './voice/music-command-handler.js';
 import { config } from './config.js';
+import jwt from 'jsonwebtoken';
 
 async function main() {
+  // C1: JWT secret startup guard
+  if (config.jwtSecret === 'dev-secret-change-me-in-production') {
+    if (config.nodeEnv === 'production') {
+      console.error('[FATAL] JWT_SECRET is set to the default value. Set a secure JWT_SECRET environment variable before running in production.');
+      process.exit(1);
+    }
+    console.warn('[WARN] JWT_SECRET is using the default development value. Set JWT_SECRET in production!');
+  }
+
   const prisma = new PrismaClient();
   const app = createApp();
   const server = createServer(app);
 
-  // WebSocket for real-time frontend updates
-  const wss = new WebSocketServer({ server, path: '/ws' });
+  // H3: WebSocket with JWT authentication
+  const wss = new WebSocketServer({
+    server,
+    path: '/ws',
+    verifyClient: ({ req }, done) => {
+      try {
+        const wsUrl = new URL(req.url!, `http://${req.headers.host}`);
+        const token = wsUrl.searchParams.get('token');
+        if (!token) return done(false, 401, 'Missing token');
+        jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
+        done(true);
+      } catch {
+        done(false, 401, 'Invalid token');
+      }
+    },
+  });
 
   // Initialize TS connection pool
   const connectionPool = new ConnectionPool(prisma);

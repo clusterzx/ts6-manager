@@ -13,8 +13,27 @@ instanceRoutes.get('/', async (req: Request, res: Response, next) => {
   try { res.json(await getClient(req).execute(0, 'instanceinfo')); } catch (err) { next(err); }
 });
 
+// M3: Whitelist safe parameters for instanceedit
+const ALLOWED_INSTANCE_PARAMS = new Set([
+  'serverinstance_guest_serverquery_group',
+  'serverinstance_template_serveradmin_group',
+  'serverinstance_template_serverdefault_group',
+  'serverinstance_template_channeladmin_group',
+  'serverinstance_template_channeldefault_group',
+  'serverinstance_filetransfer_port',
+  'serverinstance_serverquery_flood_commands',
+  'serverinstance_serverquery_flood_time',
+  'serverinstance_serverquery_ban_time',
+]);
+
 instanceRoutes.put('/', requireRole('admin'), async (req: Request, res: Response, next) => {
-  try { res.json(await getClient(req).execute(0, 'instanceedit', req.body)); } catch (err) { next(err); }
+  try {
+    const filtered: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(req.body)) {
+      if (ALLOWED_INSTANCE_PARAMS.has(key)) filtered[key] = val;
+    }
+    res.json(await getClient(req).execute(0, 'instanceedit', filtered));
+  } catch (err) { next(err); }
 });
 
 instanceRoutes.get('/host', async (req: Request, res: Response, next) => {

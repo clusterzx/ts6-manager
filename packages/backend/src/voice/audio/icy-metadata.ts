@@ -1,5 +1,6 @@
 import net from 'net';
 import tls from 'tls';
+import { isPrivateIP } from '../../utils/url-validator.js';
 
 /**
  * Fetch the current StreamTitle from an ICY/Shoutcast/Icecast radio stream.
@@ -56,9 +57,14 @@ function fetchIcySingle(streamUrl: string, timeoutMs: number): Promise<IcyResult
       `Connection: close\r\n` +
       `\r\n`;
 
+    // C4: Block private/reserved IPs
+    if (isPrivateIP(host)) {
+      return resolve({ title: null });
+    }
+
     let socket: net.Socket;
     if (isHttps) {
-      socket = tls.connect({ host, port, rejectUnauthorized: false }, () => {
+      socket = tls.connect({ host, port }, () => {
         socket.write(request);
       });
     } else {

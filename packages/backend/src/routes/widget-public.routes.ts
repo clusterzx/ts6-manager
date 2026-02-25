@@ -4,10 +4,19 @@ import { buildWidgetTree } from '../widget/build-widget-tree.js';
 import { renderWidgetSvg } from '../widget/widget-svg.js';
 import type { WidgetData } from '@ts6/common';
 
-// Simple in-process cache (45s TTL)
+// Simple in-process cache (45s TTL) with bounded size
 interface CacheEntry { data: WidgetData; expiresAt: number; }
 export const widgetDataCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 45_000;
+const MAX_CACHE_SIZE = 1000;
+
+// M7: Periodic cleanup of expired cache entries
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of widgetDataCache) {
+    if (entry.expiresAt < now) widgetDataCache.delete(key);
+  }
+}, 60_000);
 
 async function getWidgetData(token: string, req: Request): Promise<WidgetData | null> {
   const cached = widgetDataCache.get(token);
@@ -43,8 +52,9 @@ async function getWidgetData(token: string, req: Request): Promise<WidgetData | 
     onlineUsers: onlineClients.length,
     maxClients: Number(info.virtualserver_maxclients) || 0,
     uptime: Number(info.virtualserver_uptime) || 0,
-    platform: info.virtualserver_platform || '',
-    version: info.virtualserver_version || '',
+    // M8: Redact server version/platform to prevent targeted vulnerability scanning
+    platform: 'TeamSpeak',
+    version: '',
     theme: widget.theme as any,
     showChannelTree: widget.showChannelTree,
     showClients: widget.showClients,
@@ -54,6 +64,11 @@ async function getWidgetData(token: string, req: Request): Promise<WidgetData | 
     fetchedAt: new Date().toISOString(),
   };
 
+  // M7: Evict oldest entry if cache is full
+  if (widgetDataCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = widgetDataCache.keys().next().value;
+    if (firstKey) widgetDataCache.delete(firstKey);
+  }
   widgetDataCache.set(token, { data, expiresAt: Date.now() + CACHE_TTL_MS });
   return data;
 }

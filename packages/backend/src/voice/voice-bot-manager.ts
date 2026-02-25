@@ -5,6 +5,7 @@ import { VoiceBot, type VoiceBotConfig, type VoiceBotStatus } from './voice-bot.
 import { generateIdentity, restoreIdentity, type IdentityData } from './tslib/index.js';
 import type { QueueItem } from './playlist/queue.js';
 import type { MusicCommandHandler } from './music-command-handler.js';
+import { decrypt, encrypt } from '../utils/crypto.js';
 
 const PROGRESS_INTERVAL_MS = 1000;
 const MAX_RECONNECT_ATTEMPTS = 10;
@@ -46,7 +47,8 @@ export class VoiceBotManager extends EventEmitter {
     for (const dbBot of dbBots) {
       let identity: IdentityData | undefined;
       if (dbBot.identityData) {
-        const parsed = JSON.parse(dbBot.identityData);
+        // H8: Decrypt identity data before parsing
+        const parsed = JSON.parse(decrypt(dbBot.identityData));
         // Reconstruct KeyObjects from serialized scalar data
         identity = restoreIdentity(parsed);
       }
@@ -157,9 +159,10 @@ export class VoiceBotManager extends EventEmitter {
 
     // Generate identity (BigInt fields must be serialized as strings)
     const identity = generateIdentity(8);
-    const identityData = JSON.stringify(identity, (_key, value) =>
+    // H8: Encrypt identity data at rest
+    const identityData = encrypt(JSON.stringify(identity, (_key, value) =>
       typeof value === 'bigint' ? value.toString() : value
-    );
+    ));
 
     // Get server config for host
     const serverConfig = await this.prisma.tsServerConfig.findUnique({ where: { id: data.serverConfigId } });

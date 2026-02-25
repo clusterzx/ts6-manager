@@ -20,6 +20,9 @@ interface AuthStore {
   canWrite: () => boolean;
 }
 
+// M9: Tokens stored in localStorage. This is an accepted tradeoff — no XSS vectors
+// exist in the frontend (no dangerouslySetInnerHTML, no eval). If XSS is introduced,
+// consider moving to httpOnly cookies or in-memory storage.
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({

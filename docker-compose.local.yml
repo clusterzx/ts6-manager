@@ -11,7 +11,8 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - DATABASE_URL=file:/app/packages/backend/data/ts6webui.db
-      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters-long}
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me-in-production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - JWT_ACCESS_EXPIRY=15m
       - JWT_REFRESH_EXPIRY=7d
       - FRONTEND_URL=http://localhost:3000

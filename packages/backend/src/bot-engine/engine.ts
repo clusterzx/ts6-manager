@@ -12,6 +12,7 @@ import type {
 } from '@ts6/common';
 import { AnimationManager } from './animation-manager.js';
 import type { AnimationConfig } from './animation-manager.js';
+import crypto from 'crypto';
 
 /**
  * Normalize flow data from the frontend editor format to the engine format.
@@ -398,16 +399,21 @@ export class BotEngine {
       w.path === webhookPath && (w.method === method || w.method === 'ANY')
     );
 
+    // H6: Return same 404 for not-found and invalid-secret (prevent enumeration)
     if (matching.length === 0) {
-      res.status(404).json({ error: 'No webhook handler found' });
+      res.status(404).json({ error: 'Not found' });
       return;
     }
 
     let triggered = 0;
-    let rejected = 0;
     for (const wh of matching) {
-      if (wh.secret && wh.secret !== providedSecret) {
-        rejected++;
+      // H6: Mandatory webhook secrets — skip webhooks without secrets configured
+      if (!wh.secret) continue;
+
+      // H6: Timing-safe secret comparison
+      const secretBuf = Buffer.from(wh.secret);
+      const providedBuf = Buffer.from(providedSecret);
+      if (secretBuf.length !== providedBuf.length || !crypto.timingSafeEqual(secretBuf, providedBuf)) {
         continue;
       }
 
@@ -425,8 +431,9 @@ export class BotEngine {
       triggered++;
     }
 
-    if (triggered === 0 && rejected > 0) {
-      res.status(403).json({ error: 'Invalid webhook secret' });
+    // Same response regardless of reason (not found / wrong secret)
+    if (triggered === 0) {
+      res.status(404).json({ error: 'Not found' });
       return;
     }
 
