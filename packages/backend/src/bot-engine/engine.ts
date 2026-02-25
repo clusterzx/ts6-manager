@@ -522,7 +522,6 @@ export class BotEngine {
         if (triggerData.triggerType === 'event') {
           const eventTrigger = triggerData as EventTriggerData;
           if (eventTrigger.eventName !== eventName) {
-            console.log(`[BotEngine]   Flow ${flow.id}: trigger wants '${eventTrigger.eventName}', got '${eventName}' — skip`);
             continue;
           }
 
