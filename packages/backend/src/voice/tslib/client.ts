@@ -711,9 +711,17 @@ export class Ts3Client extends EventEmitter {
       case "notifytextmessage":
         this.emit("textMessage", parsed.params);
         break;
-      case "error":
+      case "error": {
         this.emit("ts3error", parsed.params);
+        // Fatal TS3 errors: reject connect promise and disconnect immediately
+        const errId = parseInt(parsed.params.id || "0");
+        if (errId === 2568 || errId === 3329 || errId === 1796) {
+          const errMsg = parsed.params.msg || "unknown error";
+          this.emit("error", new Error(`TS3 error ${errId}: ${errMsg}`));
+          this.disconnect();
+        }
         break;
+      }
     }
   }
 

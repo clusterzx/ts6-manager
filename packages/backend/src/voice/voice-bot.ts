@@ -30,6 +30,7 @@ export class VoiceBot extends EventEmitter {
   readonly queue: PlayQueue;
   private config: VoiceBotConfig;
   private _status: VoiceBotStatus = 'stopped';
+  private _lastError: string = '';
   private identity: IdentityData | null = null;
   private playbackTimer: ReturnType<typeof setTimeout> | null = null;
   private _nowPlaying: QueueItem | null = null;
@@ -79,6 +80,19 @@ export class VoiceBot extends EventEmitter {
       this.emit('disconnected');
     });
 
+    this.client.on('ts3error', (params: Record<string, string>) => {
+      const id = parseInt(params.id || '0');
+      const msg = params.msg || 'unknown error';
+      this._lastError = `TS3 error ${id}: ${msg}`;
+      // Fatal errors that should not trigger reconnect
+      // 2568 = invalid password, 3329 = banned, 1796 = max clients reached
+      if (id === 2568 || id === 3329 || id === 1796) {
+        this._status = 'error';
+        this.emit('statusChange', this._status);
+        this.emit('fatalError', this._lastError);
+      }
+    });
+
     this.client.on('command', (cmd) => {
       this.emit('command', cmd);
     });
@@ -121,6 +135,10 @@ export class VoiceBot extends EventEmitter {
       position: (this.frameIndex * FRAME_MS) / 1000,
       duration: (this.pcmFrames.length * FRAME_MS) / 1000,
     };
+  }
+
+  get lastError(): string {
+    return this._lastError;
   }
 
   get ts3ClientId(): number {

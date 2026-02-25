@@ -123,6 +123,12 @@ export class VoiceBotManager extends EventEmitter {
       }
     });
 
+    bot.on('fatalError', (msg: string) => {
+      console.error(`[VoiceBotManager] Bot ${config.id}: fatal error — ${msg}. No reconnect.`);
+      this.clearReconnect(config.id);
+      this.broadcast('music:bot:error', { botId: config.id, error: msg });
+    });
+
     // Register for music text commands
     if (this.musicCmdHandler) {
       this.musicCmdHandler.registerBot(config.id, bot);
@@ -296,6 +302,13 @@ export class VoiceBotManager extends EventEmitter {
     const bot = this.bots.get(botId);
     const state = this.reconnectState.get(botId);
     if (!bot || !state) return;
+
+    // Don't reconnect if bot hit a fatal error (wrong password, banned, etc.)
+    if (bot.status === 'error') {
+      console.log(`[VoiceBotManager] Bot ${botId}: in error state, aborting reconnect`);
+      this.reconnectState.delete(botId);
+      return;
+    }
 
     // Mark timer as executed so scheduleReconnect can run again
     state.timer = null;
