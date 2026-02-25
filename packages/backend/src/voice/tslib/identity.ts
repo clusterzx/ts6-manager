@@ -1,4 +1,7 @@
 import * as crypto from "crypto";
+import { Worker } from "worker_threads";
+import { fileURLToPath } from "url";
+import path from "path";
 import { sha1, xorInto } from "./crypto.js";
 
 // Static obfuscation key used by TS3 identity export
@@ -206,6 +209,30 @@ export function generateIdentity(securityLevel: number = 8): IdentityData {
   }
 
   return identity;
+}
+
+// Non-blocking identity generation using a Worker thread
+export function generateIdentityAsync(securityLevel: number = 8): Promise<IdentityData> {
+  return new Promise((resolve, reject) => {
+    const workerPath = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "identity-worker.js"
+    );
+    const worker = new Worker(workerPath, {
+      workerData: { securityLevel },
+    });
+    worker.on("message", (data) => {
+      try {
+        resolve(restoreIdentity(data));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    worker.on("error", reject);
+    worker.on("exit", (code) => {
+      if (code !== 0) reject(new Error(`Identity worker exited with code ${code}`));
+    });
+  });
 }
 
 function improveSecurity(identity: IdentityData, toLevel: number): void {

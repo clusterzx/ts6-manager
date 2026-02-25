@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import type { PrismaClient } from '../../generated/prisma/index.js';
 import type { WebSocketServer } from 'ws';
 import { VoiceBot, type VoiceBotConfig, type VoiceBotStatus } from './voice-bot.js';
-import { generateIdentity, restoreIdentity, type IdentityData } from './tslib/index.js';
+import { generateIdentityAsync, restoreIdentity, type IdentityData } from './tslib/index.js';
 import type { QueueItem } from './playlist/queue.js';
 import type { MusicCommandHandler } from './music-command-handler.js';
 import { decrypt, encrypt } from '../utils/crypto.js';
@@ -157,8 +157,9 @@ export class VoiceBotManager extends EventEmitter {
       throw new Error(`Music bot limit reached (${limit}). Adjust the limit in Settings.`);
     }
 
-    // Generate identity (BigInt fields must be serialized as strings)
-    const identity = generateIdentity(8);
+    // Generate identity with security level high enough for most servers (default minimum is 8, many use 21+)
+    // Uses worker thread to avoid blocking the event loop (~5s of SHA1 brute-force)
+    const identity = await generateIdentityAsync(23);
     // H8: Encrypt identity data at rest
     const identityData = encrypt(JSON.stringify(identity, (_key, value) =>
       typeof value === 'bigint' ? value.toString() : value

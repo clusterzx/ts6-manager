@@ -35,6 +35,9 @@ import { requireServerAccess } from './middleware/server-access.js';
 export function createApp(): Express {
   const app = express();
 
+  // Trust first proxy (nginx / Coolify reverse proxy)
+  app.set('trust proxy', 1);
+
   app.use(helmet());
   app.use(cors({ origin: config.frontendUrl, credentials: true }));
   app.use(express.json({ limit: '10mb' }));

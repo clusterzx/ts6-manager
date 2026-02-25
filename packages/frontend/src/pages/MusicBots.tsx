@@ -1333,12 +1333,12 @@ function RadioTab() {
 
       {/* Presets Dialog */}
       <Dialog open={showPresets} onOpenChange={setShowPresets}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col overflow-auto">
           <DialogHeader>
             <DialogTitle>Radio Presets</DialogTitle>
             <DialogDescription>Add popular radio stations with one click.</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-1 max-h-[400px]">
+          <div className="flex-1 max-h-[400px] overflow-y-auto">
             {presetList.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8">No presets available.</p>
             ) : presetList.map((preset, i) => (
@@ -1356,7 +1356,7 @@ function RadioTab() {
                 </Button>
               </div>
             ))}
-          </ScrollArea>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPresets(false)}>Done</Button>
           </DialogFooter>
