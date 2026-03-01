@@ -2,8 +2,11 @@ import { Router, Request, Response } from 'express';
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
 import type { VoiceBotManager } from '../voice/voice-bot-manager.js';
+import { downloadYouTube } from '../voice/audio/youtube.js';
 
 export const musicBotRoutes: Router = Router();
+
+const MUSIC_DIR = process.env.MUSIC_DIR || '/data/music';
 
 // All routes require admin role
 musicBotRoutes.use(requireRole('admin'));
@@ -202,6 +205,69 @@ musicBotRoutes.post('/:id/play', async (req: Request, res: Response, next) => {
 
     res.json({ success: true });
   } catch (err) { next(err); }
+});
+
+// POST /:id/play-url — Play a directly provided URL (e.g. from Music Requests History)
+musicBotRoutes.post('/:id/play-url', async (req: Request, res: Response, next) => {
+  try {
+    const manager: VoiceBotManager = req.app.locals.voiceBotManager;
+    const id = parseInt(req.params.id as string);
+    const { url } = req.body;
+    if (!url) throw new AppError(400, 'url is required');
+
+    const bot = manager.getBot(id);
+    if (!bot) throw new AppError(404, 'Music bot not found');
+    if (bot.status !== 'connected' && bot.status !== 'playing' && bot.status !== 'paused') {
+      throw new AppError(400, 'Bot is not connected');
+    }
+
+    const { filePath, info } = await downloadYouTube(url, MUSIC_DIR);
+
+    const queueItem = {
+      id: `yt_${info.id}`,
+      title: info.title,
+      artist: info.artist,
+      duration: info.duration,
+      filePath,
+      source: 'youtube' as const,
+      sourceUrl: url,
+    };
+
+    bot.queue.add(queueItem);
+    bot.queue.playAt(bot.queue.length - 1);
+    await bot.play(queueItem);
+
+    // Save to MusicRequest History
+    try {
+      const prisma = req.app.locals.prisma;
+      if (queueItem.sourceUrl && bot.currentConfig.serverConfigId) {
+        await prisma.musicRequest.upsert({
+          where: {
+            serverConfigId_url: {
+              serverConfigId: bot.currentConfig.serverConfigId,
+              url: queueItem.sourceUrl,
+            },
+          },
+          update: {
+            requestedAt: new Date(),
+            title: queueItem.title || 'Unknown Title',
+          },
+          create: {
+            serverConfigId: bot.currentConfig.serverConfigId,
+            url: queueItem.sourceUrl,
+            title: queueItem.title || 'Unknown Title',
+            requestedAt: new Date(),
+          },
+        });
+      }
+    } catch (saveErr) {
+      console.error('[music-bots.routes] Failed to save music request history:', saveErr);
+    }
+
+    res.json({ success: true, queueItem });
+  } catch (err: any) {
+    next(new AppError(500, `Failed to play URL: ${err.message}`));
+  }
 });
 
 // POST /:id/play-radio — Play a radio station (streaming)

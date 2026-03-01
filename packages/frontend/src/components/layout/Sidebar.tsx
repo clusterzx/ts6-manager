@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Server, Hash, Users, Shield, ShieldCheck,
   Lock, Ban, KeyRound, FolderOpen, MessageSquareWarning, Mail,
-  ScrollText, Settings, Bot, Cpu, ChevronLeft, ChevronRight, Music,
+  ScrollText, Settings, Bot, Cpu, ChevronLeft, ChevronRight, Music, ListMusic,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui.store';
@@ -52,6 +52,7 @@ const navSections = [
     items: [
       { to: '/logs', icon: ScrollText, label: 'Server Logs', adminOnly: true },
       { to: '/instance', icon: Cpu, label: 'Instance', adminOnly: true },
+      { to: '/music-requests', icon: ListMusic, label: 'Music Request History', adminOnly: true },
     ],
   },
   {
@@ -102,50 +103,50 @@ export function Sidebar() {
             {navSections
               .filter((section) => !(section as any).adminOnly || isAdmin)
               .map((section, si) => {
-              const visibleItems = section.items.filter((item) => !(item as any).adminOnly || isAdmin);
-              if (visibleItems.length === 0) return null;
-              return (
-              <div key={section.label}>
-                {si > 0 && <Separator className="my-2 bg-sidebar-border" />}
-                {!sidebarCollapsed && (
-                  <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                    {section.label}
-                  </p>
-                )}
-                {visibleItems.map((item) => {
-                  const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + '/');
-                  const link = (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      className={cn(
-                        'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-all duration-150',
-                        sidebarCollapsed && 'justify-center px-0 py-2',
-                        isActive
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
-                      )}
-                    >
-                      <item.icon className={cn('h-4 w-4 shrink-0', isActive && 'text-primary')} />
-                      {!sidebarCollapsed && <span>{item.label}</span>}
-                    </NavLink>
-                  );
+                const visibleItems = section.items.filter((item) => !(item as any).adminOnly || isAdmin);
+                if (visibleItems.length === 0) return null;
+                return (
+                  <div key={section.label}>
+                    {si > 0 && <Separator className="my-2 bg-sidebar-border" />}
+                    {!sidebarCollapsed && (
+                      <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                        {section.label}
+                      </p>
+                    )}
+                    {visibleItems.map((item) => {
+                      const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + '/');
+                      const link = (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          className={cn(
+                            'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-all duration-150',
+                            sidebarCollapsed && 'justify-center px-0 py-2',
+                            isActive
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
+                          )}
+                        >
+                          <item.icon className={cn('h-4 w-4 shrink-0', isActive && 'text-primary')} />
+                          {!sidebarCollapsed && <span>{item.label}</span>}
+                        </NavLink>
+                      );
 
-                  if (sidebarCollapsed) {
-                    return (
-                      <Tooltip key={item.to}>
-                        <TooltipTrigger asChild>{link}</TooltipTrigger>
-                        <TooltipContent side="right" className="font-medium">
-                          {item.label}
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  }
-                  return link;
-                })}
-              </div>
-              );
-            })}
+                      if (sidebarCollapsed) {
+                        return (
+                          <Tooltip key={item.to}>
+                            <TooltipTrigger asChild>{link}</TooltipTrigger>
+                            <TooltipContent side="right" className="font-medium">
+                              {item.label}
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      }
+                      return link;
+                    })}
+                  </div>
+                );
+              })}
           </nav>
         </ScrollArea>
 

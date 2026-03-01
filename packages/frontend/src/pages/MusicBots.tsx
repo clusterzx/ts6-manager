@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { musicRequestsApi } from '@/api/music-requests.api';
 import {
   useMusicBots, useCreateMusicBot, useUpdateMusicBot, useDeleteMusicBot,
   useStartMusicBot, useStopMusicBot, useMusicBotState,
-  usePlaySong, usePausePlayback, useResumePlayback, useStopPlayback,
+  usePlaySong, usePlayUrl, usePausePlayback, useResumePlayback, useStopPlayback,
   useSkipTrack, usePreviousTrack, useSeek, useSetVolume,
   useEnqueue, useLoadPlaylist, useRemoveFromQueue, useClearQueue,
   useSetShuffle, useSetRepeat,
@@ -31,7 +33,7 @@ import {
   Music, Plus, Trash2, Play, Pause, SkipForward, SkipBack, Square,
   Volume2, VolumeX, Upload, Search, Download, ListMusic, Shuffle,
   Repeat, Repeat1, Power, PowerOff, RefreshCw, Pencil, X, Loader2,
-  Youtube, FileAudio, Link, GripVertical, Music2, Radio,
+  Youtube, FileAudio, Link, GripVertical, Music2, Radio, Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBytes } from '@/lib/utils';
@@ -281,10 +283,11 @@ function BotPlayerCard({ bot, onEdit, onDelete, onPlay }: {
 
 // ─── Play Song Dialog ─────────────────────────────────────────────────────────
 
-function PlaySongDialog({ botId, onClose, onPlaySong, onEnqueue, onLoadPlaylist }: {
+function PlaySongDialog({ botId, onClose, onPlaySong, onPlayUrl, onEnqueue, onLoadPlaylist }: {
   botId: number | null;
   onClose: () => void;
   onPlaySong: (songId: number) => void;
+  onPlayUrl: (url: string) => void;
   onEnqueue: (songId: number) => void;
   onLoadPlaylist: (playlistId: number) => void;
 }) {
@@ -294,7 +297,13 @@ function PlaySongDialog({ botId, onClose, onPlaySong, onEnqueue, onLoadPlaylist 
   const configId = serverId || selectedConfigId;
   const { data: songs } = useSongs(configId);
   const { data: playlists } = usePlaylists();
-  const [tab, setTab] = useState<'songs' | 'playlists'>('songs');
+  const { data: history = [] } = useQuery({
+    queryKey: ['music-requests', configId],
+    queryFn: () => musicRequestsApi.list(configId!),
+    enabled: !!configId,
+  });
+
+  const [tab, setTab] = useState<'songs' | 'playlists' | 'history'>('songs');
   const [filter, setFilter] = useState('');
 
   const serverList = Array.isArray(servers) ? servers : [];
@@ -323,6 +332,11 @@ function PlaySongDialog({ botId, onClose, onPlaySong, onEnqueue, onLoadPlaylist 
             onClick={() => setTab('playlists')}
           >
             <ListMusic className="h-3 w-3 mr-1" /> Playlists
+          </Button>
+          <Button variant={tab === 'history' ? 'default' : 'outline'} size="sm" className="h-7 text-xs"
+            onClick={() => setTab('history')}
+          >
+            <Clock className="h-3 w-3 mr-1" /> History
           </Button>
           <div className="flex-1" />
           {tab === 'songs' && (
@@ -394,6 +408,28 @@ function PlaySongDialog({ botId, onClose, onPlaySong, onEnqueue, onLoadPlaylist 
           </ScrollArea>
         )}
 
+        {tab === 'history' && (
+          <ScrollArea className="flex-1 max-h-[400px]">
+            {history.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">No music requests found. Use !play locally in server to view history.</p>
+            ) : history.map((req: any) => (
+              <div key={req.id} className="flex items-center gap-2 py-1.5 px-2 hover:bg-muted/30 transition-colors rounded group">
+                <Music2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium truncate" title={req.title}>{req.title}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="default" size="sm" className="h-6 text-[10px] px-2"
+                    onClick={() => onPlayUrl(req.url)}
+                  >
+                    <Play className="h-3 w-3 mr-0.5" /> Play
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </ScrollArea>
+        )}
+
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
         </DialogFooter>
@@ -412,6 +448,7 @@ function BotsTab() {
   const updateBot = useUpdateMusicBot();
   const deleteBot = useDeleteMusicBot();
   const playSong = usePlaySong();
+  const playUrl = usePlayUrl();
   const enqueueSong = useEnqueue();
   const loadPlaylist = useLoadPlaylist();
 
@@ -450,15 +487,17 @@ function BotsTab() {
 
   const handleUpdate = () => {
     if (!editBot) return;
-    updateBot.mutate({ id: editBot.id, data: {
-      name: form.name,
-      nickname: form.nickname,
-      serverPassword: form.serverPassword || undefined,
-      defaultChannel: form.defaultChannel || undefined,
-      channelPassword: form.channelPassword || undefined,
-      volume: form.volume,
-      autoStart: form.autoStart,
-    }}, {
+    updateBot.mutate({
+      id: editBot.id, data: {
+        name: form.name,
+        nickname: form.nickname,
+        serverPassword: form.serverPassword || undefined,
+        defaultChannel: form.defaultChannel || undefined,
+        channelPassword: form.channelPassword || undefined,
+        volume: form.volume,
+        autoStart: form.autoStart,
+      }
+    }, {
       onSuccess: () => { toast.success('Bot updated'); setEditBot(null); },
       onError: () => toast.error('Failed to update bot'),
     });
@@ -580,6 +619,14 @@ function BotsTab() {
             playSong.mutate({ botId: showPlayDialog, songId }, {
               onSuccess: () => { toast.success('Playing'); setShowPlayDialog(null); },
               onError: () => toast.error('Failed to play song'),
+            });
+          }
+        }}
+        onPlayUrl={(url) => {
+          if (showPlayDialog) {
+            playUrl.mutate({ botId: showPlayDialog, url }, {
+              onSuccess: () => { toast.success('Playing URL'); setShowPlayDialog(null); },
+              onError: () => toast.error('Failed to play URL'),
             });
           }
         }}
@@ -807,11 +854,10 @@ function LibraryTab() {
                 {urlInfo.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`flex items-center gap-3 px-2 py-1.5 rounded transition-colors ${
-                      urlInfo.type === 'playlist'
+                    className={`flex items-center gap-3 px-2 py-1.5 rounded transition-colors ${urlInfo.type === 'playlist'
                         ? `cursor-pointer ${selectedUrlIds.has(item.id) ? 'bg-primary/10' : 'hover:bg-muted/50'}`
                         : 'hover:bg-muted/50'
-                    }`}
+                      }`}
                     onClick={() => urlInfo.type === 'playlist' && toggleUrlSelect(item.id)}
                   >
                     {urlInfo.type === 'playlist' && (
@@ -1003,9 +1049,8 @@ function PlaylistsTab() {
           ) : playlists.map((pl) => (
             <div
               key={pl.id}
-              className={`flex items-center gap-2 p-2.5 rounded-md cursor-pointer transition-colors ${
-                selectedId === pl.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted/50 border border-transparent'
-              }`}
+              className={`flex items-center gap-2 p-2.5 rounded-md cursor-pointer transition-colors ${selectedId === pl.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted/50 border border-transparent'
+                }`}
               onClick={() => setSelectedId(pl.id)}
             >
               <ListMusic className={`h-4 w-4 shrink-0 ${selectedId === pl.id ? 'text-primary' : 'text-muted-foreground'}`} />

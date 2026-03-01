@@ -85,6 +85,15 @@ export function usePlaySong() {
   });
 }
 
+export function usePlayUrl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ botId, url }: { botId: number; url: string }) =>
+      musicBotsApi.playUrl(botId, url),
+    onSuccess: (_, { botId }) => qc.invalidateQueries({ queryKey: ['music-bot-state', botId] }),
+  });
+}
+
 export function usePausePlayback() {
   const qc = useQueryClient();
   return useMutation({

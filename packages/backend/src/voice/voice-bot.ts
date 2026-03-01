@@ -13,6 +13,7 @@ export interface PlaybackProgress {
 
 export interface VoiceBotConfig {
   id: number;
+  serverConfigId: number;
   name: string;
   serverHost: string;
   serverPort: number;
@@ -176,7 +177,7 @@ export class VoiceBot extends EventEmitter {
     }
     try {
       this.client.sendCommand(buildCommand('clientupdate', { client_nickname: nick }));
-    } catch {}
+    } catch { }
   }
 
   /** Reset TS3 nickname to original. */
@@ -184,7 +185,7 @@ export class VoiceBot extends EventEmitter {
     if (this._status === 'stopped') return;
     try {
       this.client.sendCommand(buildCommand('clientupdate', { client_nickname: this._originalNickname }));
-    } catch {}
+    } catch { }
   }
 
   /** Start polling ICY metadata for a radio stream. */
@@ -217,7 +218,7 @@ export class VoiceBot extends EventEmitter {
 
       this.updateNowPlayingNickname(title);
       this.emit('metadataChange', this._nowPlaying);
-    } catch {}
+    } catch { }
   }
 
   private stopIcyPolling(): void {
