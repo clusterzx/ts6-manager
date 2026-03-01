@@ -25,7 +25,7 @@ export class MusicCommandHandler {
   constructor(
     private prisma: PrismaClient,
     private voiceBotManager: VoiceBotManager,
-  ) {}
+  ) { }
 
   /**
    * Register text message listener on a VoiceBot instance.
@@ -196,6 +196,32 @@ export class MusicCommandHandler {
       bot.queue.add(queueItem);
       bot.queue.playAt(bot.queue.length - 1);
       await bot.play(queueItem);
+
+      // Save to MusicRequest History
+      try {
+        if (queueItem.sourceUrl && bot.currentConfig.serverConfigId) {
+          await this.prisma.musicRequest.upsert({
+            where: {
+              serverConfigId_url: {
+                serverConfigId: bot.currentConfig.serverConfigId,
+                url: queueItem.sourceUrl,
+              },
+            },
+            update: {
+              requestedAt: new Date(),
+              title: queueItem.title || 'Unknown Title',
+            },
+            create: {
+              serverConfigId: bot.currentConfig.serverConfigId,
+              url: queueItem.sourceUrl,
+              title: queueItem.title || 'Unknown Title',
+              requestedAt: new Date(),
+            },
+          });
+        }
+      } catch (saveErr) {
+        console.error('[MusicCommandHandler] Failed to save music request history:', saveErr);
+      }
 
       this.reply(bot, userClid, `Now playing: ${info.artist} - ${info.title}`);
     } catch (err: any) {

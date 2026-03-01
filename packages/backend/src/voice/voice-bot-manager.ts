@@ -54,6 +54,7 @@ export class VoiceBotManager extends EventEmitter {
       }
       const config: VoiceBotConfig = {
         id: dbBot.id,
+        serverConfigId: dbBot.serverConfigId,
         name: dbBot.name,
         serverHost: dbBot.serverConfig.host,
         serverPort: 9987, // Default TS3 voice port
@@ -185,6 +186,7 @@ export class VoiceBotManager extends EventEmitter {
 
     const config: VoiceBotConfig = {
       id: dbBot.id,
+      serverConfigId: data.serverConfigId,
       name: dbBot.name,
       serverHost: serverConfig.host,
       serverPort: 9987,
