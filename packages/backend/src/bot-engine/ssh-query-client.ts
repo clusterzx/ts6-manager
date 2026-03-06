@@ -208,7 +208,7 @@ export class SshQueryClient extends EventEmitter {
 
     await this.executeCommand(`use sid=${sid}`);
 
-    // Optional: identifiable nickname
+   
     try {
       await this.executeCommand(`clientupdate client_nickname=TS6-WebUI-Cmd-${channelId}-${this.nickSuffix}`);
     } catch (err: any) {

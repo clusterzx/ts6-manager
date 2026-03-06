@@ -505,7 +505,7 @@ export class BotEngine {
       neededPairs.add(`${flow.serverConfigId}:${flow.virtualServerId}`);
     }
 
-    // 1) Base SSH connections entfernen, die niemand mehr braucht
+    // 1) cleanup unused ssh connections
     for (const key of this.eventBridge.getConnectedKeys()) {
       if (!neededPairs.has(key)) {
         const [configId, sid] = key.split(':').map(Number);
@@ -513,13 +513,13 @@ export class BotEngine {
       }
     }
 
-    // 2) Command listeners pro *benötigtem* pair syncen
+    // 2) sync command listeners per pair
     for (const pair of neededPairs) {
       const [configId, sid] = pair.split(':').map(Number);
       this.syncCommandListenersForPair(configId, sid);
     }
 
-    // 3) Command listeners für Pairs entfernen, die komplett weg sind
+    // 3) delete command listener for unused pairs
     for (const cmdKey of this.eventBridge.getCommandListenerKeys()) {
       // expected: `${configId}:${sid}:cmd:${channelId}`
       const m = cmdKey.match(/^(\d+):(\d+):cmd:(\d+)$/);
@@ -606,7 +606,7 @@ export class BotEngine {
             data.clientId;
 
           if (invoker && !data.clid) {
-            // sorgt dafür, dass {{event.clid}} und executeMove() funktionieren
+            
             (enrichedData as any).clid = String(invoker);
           }
 
