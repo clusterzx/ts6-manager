@@ -4,11 +4,11 @@ import OpusScript from "opusscript";
 import { validateUrl } from "../../utils/url-validator.js";
 
 export const SAMPLE_RATE = 48000;
-export const CHANNELS = 1;
+export const CHANNELS = 2;
 export const FRAME_SIZE = 960; // 20ms at 48kHz
 export const BYTES_PER_FRAME = FRAME_SIZE * CHANNELS * 2; // 16-bit = 2 bytes per sample
 export const FRAME_MS = 20;
-const BITRATE = 96000;
+const BITRATE = 160000;
 
 export class AudioPipeline {
   private encoder: OpusScript;
