@@ -57,6 +57,11 @@ export class VoiceBot extends EventEmitter {
 
   // Reconnect: distinguishes manual stop from unexpected disconnect
   private _manuallyStopped: boolean = false;
+  
+  // Video streaming state
+  private _isVideoStreaming: boolean = false;
+  private videoPipeline: VideoPipeline = new VideoPipeline();
+  private videoStreamConfig: VideoStreamOptions | null = null;
 
   constructor(config: VoiceBotConfig) {
     super();
