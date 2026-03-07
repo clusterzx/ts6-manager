@@ -3,6 +3,7 @@ import { Ts3Client, type Ts3ClientOptions, generateIdentity, type IdentityData, 
 import { AudioPipeline, FRAME_MS, BYTES_PER_FRAME } from './audio/pipeline.js';
 import { PlayQueue, type QueueItem } from './playlist/queue.js';
 import { fetchIcyMetadata } from './audio/icy-metadata.js';
+import { VideoPipeline, type VideoStreamOptions, type VideoStream } from './audio/video-pipeline.js';
 
 export type VoiceBotStatus = 'stopped' | 'starting' | 'connected' | 'playing' | 'paused' | 'error';
 
