@@ -151,6 +151,7 @@ model MusicBot {
   updatedAt       DateTime  @updatedAt
 
   playlists Playlist[]
+  supportsVideo  Boolean  @default(true)
 }
 
 model Song {
@@ -165,6 +166,12 @@ model Song {
   serverConfigId  Int
   serverConfig    TsServerConfig @relation(fields: [serverConfigId], references: [id], onDelete: Cascade)
   createdAt       DateTime  @default(now())
+  
+  // Video streaming support
+  isVideo      Boolean  @default(false)
+  m3u8Url      String?  // M3U8 playlist URL for video streams
+  videoQuality String?  // Preferred quality: auto, 1080p, 720p, 480p, 360p
+  videoCodec   String?  // h264 or vp9
 
   playlistSongs PlaylistSong[]
 }
