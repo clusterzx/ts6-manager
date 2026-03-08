@@ -41,10 +41,20 @@ export class VoiceBot extends EventEmitter {
   private pausedAtFrame: number = 0;
   private loopEpoch: number = 0;
 
+  private lastVoiceSendAt = 0;       // performance.now() timestamp
+  private lastVoiceLogAt = 0;        // rate limit logs
+
+  private statWindowStart = 0;
+  private statCount = 0;
+  private statDtSum = 0;
+  private statDtMin = Number.POSITIVE_INFINITY;
+  private statDtMax = 0;
+
   // Streaming state (radio)
   private _isStreaming: boolean = false;
   private streamKill: (() => void) | null = null;
-  private streamBuffer: Buffer = Buffer.alloc(0);
+  private streamChunks: Buffer[] = [];
+  private streamChunksSize: number = 0;
   private streamStartTime: number = 0;
 
   // Nickname "now playing" state
@@ -176,7 +186,7 @@ export class VoiceBot extends EventEmitter {
     }
     try {
       this.client.sendCommand(buildCommand('clientupdate', { client_nickname: nick }));
-    } catch {}
+    } catch { }
   }
 
   /** Reset TS3 nickname to original. */
@@ -184,7 +194,7 @@ export class VoiceBot extends EventEmitter {
     if (this._status === 'stopped') return;
     try {
       this.client.sendCommand(buildCommand('clientupdate', { client_nickname: this._originalNickname }));
-    } catch {}
+    } catch { }
   }
 
   /** Start polling ICY metadata for a radio stream. */
@@ -217,7 +227,7 @@ export class VoiceBot extends EventEmitter {
 
       this.updateNowPlayingNickname(title);
       this.emit('metadataChange', this._nowPlaying);
-    } catch {}
+    } catch { }
   }
 
   private stopIcyPolling(): void {
@@ -324,7 +334,8 @@ export class VoiceBot extends EventEmitter {
     try {
       const stream = await this.pipeline.toPcmStream(item.streamUrl);
       this.streamKill = stream.kill;
-      this.streamBuffer = Buffer.alloc(0);
+      this.streamChunks = [];
+      this.streamChunksSize = 0;
 
       const epoch = ++this.loopEpoch;
       let framesSent = 0;
@@ -332,7 +343,8 @@ export class VoiceBot extends EventEmitter {
 
       stream.stdout.on('data', (chunk: Buffer) => {
         if (epoch !== this.loopEpoch) return;
-        this.streamBuffer = Buffer.concat([this.streamBuffer, chunk]);
+        this.streamChunks.push(chunk);
+        this.streamChunksSize += chunk.length;
       });
 
       stream.process.on('close', () => {
@@ -355,25 +367,50 @@ export class VoiceBot extends EventEmitter {
         this.emit('statusChange', this._status);
       });
 
-      // Playback loop: send frames at 20ms intervals from the buffer
-      const sendLoop = () => {
+      let nextDue = performance.now() + 200; // initial buffer delay
+
+      const tick = () => {
         if (epoch !== this.loopEpoch) return;
 
-        const elapsed = performance.now() - startTime;
-        const targetFrames = Math.floor(elapsed / FRAME_MS);
+        const now = performance.now();
 
-        while (framesSent < targetFrames && this.streamBuffer.length >= BYTES_PER_FRAME) {
-          const frame = this.streamBuffer.subarray(0, BYTES_PER_FRAME);
-          this.streamBuffer = this.streamBuffer.subarray(BYTES_PER_FRAME);
-          const opusFrame = this.pipeline.encodeFrame(frame, this.config.volume);
-          this.client.sendVoice(opusFrame);
-          framesSent++;
+        // If we're early, wait until the next due time
+        if (now < nextDue) {
+          this.playbackTimer = setTimeout(tick, Math.max(1, nextDue - now));
+          return;
         }
 
-        this.playbackTimer = setTimeout(sendLoop, 5);
+        // If we're behind, resync clock (no bursts)
+        const lagMs = now - nextDue;
+        if (lagMs >= FRAME_MS) {
+          nextDue = now + FRAME_MS;
+        }
+
+        // Send exactly one frame if available
+        const frame = this.takeFromStreamChunks(BYTES_PER_FRAME);
+        if (frame) {
+          const opusFrame = this.pipeline.encodeFrame(frame, this.config.volume);
+          this.sendVoiceFrame(opusFrame);
+        }
+
+        // Next slot
+        nextDue += FRAME_MS;
+
+        // If we fell way behind, resync to avoid long "catch-up"
+        if (now - nextDue > 5 * FRAME_MS) {
+          nextDue = now + FRAME_MS;
+        }
+
+        const delay = nextDue - performance.now();
+
+        if (delay > 2) {
+          this.playbackTimer = setTimeout(tick, delay);
+        } else {
+          setImmediate(tick);
+        }
       };
 
-      this.playbackTimer = setTimeout(sendLoop, 200); // Initial buffer delay
+      this.playbackTimer = setTimeout(tick, 200);
     } catch (err) {
       this._isStreaming = false;
       this.streamKill = null;
@@ -467,53 +504,138 @@ export class VoiceBot extends EventEmitter {
     }
   }
 
+  private takeFromStreamChunks(n: number): Buffer | null {
+    if (this.streamChunksSize < n) return null;
+
+    const out = Buffer.allocUnsafe(n);
+    let offset = 0;
+
+    while (offset < n) {
+      const head = this.streamChunks[0];
+      const need = n - offset;
+
+      if (head.length <= need) {
+        head.copy(out, offset);
+        offset += head.length;
+        this.streamChunks.shift();
+      } else {
+        head.copy(out, offset, 0, need);
+        this.streamChunks[0] = head.subarray(need);
+        offset += need;
+      }
+    }
+
+    this.streamChunksSize -= n;
+    return out;
+  }
+
+  private sendVoiceFrame(opusFrame: Buffer): void {
+    const now = performance.now();
+    const dt = this.lastVoiceSendAt ? (now - this.lastVoiceSendAt) : 0;
+    this.lastVoiceSendAt = now;
+
+    // 1s stats
+    if (!this.statWindowStart) this.statWindowStart = now;
+    if (dt > 0) {
+      this.statCount++;
+      this.statDtSum += dt;
+      this.statDtMin = Math.min(this.statDtMin, dt);
+      this.statDtMax = Math.max(this.statDtMax, dt);
+    }
+
+    if (now - this.statWindowStart >= 1000) {
+      const avg = this.statCount ? (this.statDtSum / this.statCount) : 0;
+      console.log(
+        `[voice] rate=${this.statCount}/s avg=${avg.toFixed(1)}ms min=${this.statDtMin.toFixed(1)} max=${this.statDtMax.toFixed(1)} streaming=${this._isStreaming}`
+      );
+      this.statWindowStart = now;
+      this.statCount = 0;
+      this.statDtSum = 0;
+      this.statDtMin = Number.POSITIVE_INFINITY;
+      this.statDtMax = 0;
+    }
+
+    this.client.sendVoice(opusFrame);
+  }
+
   private startPlaybackLoop(): void {
     const epoch = ++this.loopEpoch;
-    const startTime = performance.now();
-    const startFrame = this.frameIndex;
 
-    const sendNext = () => {
+    // "Audio clock": next frame is due at this timestamp
+    let nextDue = performance.now();
+
+    const tick = () => {
       if (epoch !== this.loopEpoch) return;
 
-      const elapsed = performance.now() - startTime;
-      const targetFrame = startFrame + Math.floor(elapsed / FRAME_MS);
+      const now = performance.now();
 
-      while (this.frameIndex < this.pcmFrames.length && this.frameIndex <= targetFrame) {
+      // If we're early, wait until the next due time
+      if (now < nextDue) {
+        const delay = Math.max(1, nextDue - now);
+        this.playbackTimer = setTimeout(tick, delay);
+        return;
+      }
+
+      // If we're behind, skip frames (never burst-send)
+      const lagMs = now - nextDue;
+      if (lagMs >= FRAME_MS) {
+        const skipFrames = Math.floor(lagMs / FRAME_MS);
+
+        // skip frames in data to catch up without bursts
+        this.frameIndex = Math.min(this.frameIndex + skipFrames, this.pcmFrames.length);
+
+        // IMPORTANT: resync clock so next send is ~20ms in the future (prevents immediate burst)
+        nextDue = now + FRAME_MS;
+      }
+
+      // Send exactly ONE frame (if available)
+      if (this.frameIndex < this.pcmFrames.length) {
         const opusFrame = this.pipeline.encodeFrame(this.pcmFrames[this.frameIndex], this.config.volume);
-        this.client.sendVoice(opusFrame);
+        this.sendVoiceFrame(opusFrame);
         this.frameIndex++;
       }
 
+      // End-of-track handling
       if (this.frameIndex >= this.pcmFrames.length) {
         this.client.sendVoiceStop();
         this.clearTimer();
+
         const finished = this._nowPlaying;
         this._nowPlaying = null;
         this._status = 'connected';
         this.emit('statusChange', this._status);
         this.emit('trackEnd', finished);
 
-        // Track repeat: replay the same song (works even without queue)
+        // Track repeat
         if (this.queue.repeat === 'track' && finished) {
           this.play(finished).catch((err) => this.emit('error', err));
           return;
         }
 
         const next = this.queue.next();
-        if (next) {
-          this.play(next).catch((err) => this.emit('error', err));
-        } else {
-          this.resetNickname();
-        }
+        if (next) this.play(next).catch((err) => this.emit('error', err));
+        else this.resetNickname();
         return;
       }
 
-      const nextFrameTime = startTime + (this.frameIndex - startFrame) * FRAME_MS;
-      const delay = Math.max(1, nextFrameTime - performance.now());
-      this.playbackTimer = setTimeout(sendNext, delay);
+      // Schedule next tick for the next 20ms slot
+      nextDue += FRAME_MS;
+
+      // If we fell way behind, resync to avoid long "catch-up"
+      if (now - nextDue > 5 * FRAME_MS) {
+        nextDue = now + FRAME_MS;
+      }
+
+      const delay = nextDue - performance.now();
+
+      if (delay > 2) {
+        this.playbackTimer = setTimeout(tick, delay);
+      } else {
+        setImmediate(tick);
+      }
     };
 
-    this.playbackTimer = setTimeout(sendNext, 0);
+    this.playbackTimer = setTimeout(tick, 0);
   }
 
   private clearTimer(): void {
@@ -536,6 +658,7 @@ export class VoiceBot extends EventEmitter {
       this.streamKill = null;
     }
     this._isStreaming = false;
-    this.streamBuffer = Buffer.alloc(0);
+    this.streamChunks = [];
+    this.streamChunksSize = 0;
   }
 }

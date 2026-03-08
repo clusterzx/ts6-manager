@@ -171,6 +171,14 @@ export class Ts3Client extends EventEmitter {
       this.socket.bind(0, () => {
         this.lastMessageTime = Date.now();
 
+        try {
+          this.socket.setSendBufferSize(1024 * 1024);
+          this.socket.setRecvBufferSize(1024 * 1024);
+        } catch (e) {
+          // Never hard-fail if the platform/container disallows it
+          this.emit("debug", `[Ts3Client] Could not set UDP buffer size: ${String(e)}`);
+        }
+
         // Start resend timer (100ms interval)
         this.resendTimer = setInterval(() => this.resendLoop(), 100);
         // Ping timer starts after connection
