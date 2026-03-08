@@ -4,7 +4,7 @@ import OpusScript from "opusscript";
 import { validateUrl } from "../../utils/url-validator.js";
 
 export const SAMPLE_RATE = 48000;
-export const CHANNELS = 1;
+export const CHANNELS = 2;
 export const FRAME_SIZE = 960; // 20ms at 48kHz
 export const BYTES_PER_FRAME = FRAME_SIZE * CHANNELS * 2; // 16-bit = 2 bytes per sample
 export const FRAME_MS = 20;
@@ -12,10 +12,28 @@ const BITRATE = 96000;
 
 export class AudioPipeline {
   private encoder: OpusScript;
+  private opusPeak = 0;
+  private lastOpusPeakLog = 0;
 
   constructor() {
     this.encoder = new OpusScript(SAMPLE_RATE, CHANNELS, OpusScript.Application.AUDIO);
     this.encoder.setBitrate(BITRATE);
+    // After this.encoder.setBitrate(BITRATE);
+
+    const OPUS_SET_VBR = 4006;
+    const OPUS_SET_VBR_CONSTRAINT = 4020;
+    const OPUS_SET_SIGNAL = 4024;
+
+    const OPUS_SIGNAL_MUSIC = 3002;
+
+    // Hard CBR (reduces spikes)
+    this.encoder.encoderCTL(OPUS_SET_VBR, 0);
+
+    // (Optional; CBR ignores it, but harmless)
+    this.encoder.encoderCTL(OPUS_SET_VBR_CONSTRAINT, 1);
+
+    // Tell encoder it’s music (helps tuning)
+    this.encoder.encoderCTL(OPUS_SET_SIGNAL, OPUS_SIGNAL_MUSIC);
   }
 
   /**
@@ -57,7 +75,19 @@ export class AudioPipeline {
       }
       input = scaled;
     }
-    return Buffer.from(this.encoder.encode(input, FRAME_SIZE));
+    const encoded = this.encoder.encode(input, FRAME_SIZE);
+    const opusFrame = Buffer.isBuffer(encoded) ? encoded : Buffer.from(encoded);
+
+    this.opusPeak = Math.max(this.opusPeak, opusFrame.length);
+
+    //const now = Date.now();
+    //if (now - this.lastOpusPeakLog > 1000) {
+    //  console.log(`[voice] opus peak (1s): ${this.opusPeak} bytes`);
+    //  this.opusPeak = 0;
+    //  this.lastOpusPeakLog = now;
+    //}
+
+    return opusFrame;
   }
 
   /**
@@ -89,7 +119,7 @@ export class AudioPipeline {
       stdout: ffmpeg.stdout,
       process: ffmpeg,
       kill: () => {
-        try { ffmpeg.kill("SIGKILL"); } catch {}
+        try { ffmpeg.kill("SIGKILL"); } catch { }
       },
     };
   }
@@ -113,7 +143,7 @@ export class AudioPipeline {
         chunks.push(chunk);
       });
 
-      ffmpeg.stderr.on("data", () => {});
+      ffmpeg.stderr.on("data", () => { });
 
       ffmpeg.on("close", (code) => {
         if (code === 0) {

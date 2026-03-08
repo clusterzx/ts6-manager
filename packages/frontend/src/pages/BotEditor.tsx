@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { PlaceholderReference } from '@/components/bots/PlaceholderReference';
+import { Textarea } from '@/components/ui/textarea';
 
 // --- Node type definitions ---
 type HandleConfig = {
@@ -737,14 +738,46 @@ export default function BotEditor() {
                   )}
 
                   {selectedNodeData.type === 'trigger_command' && (
-                    <div>
-                      <Label className="text-[10px] text-muted-foreground">Command Prefix</Label>
-                      <Input
-                        className="h-7 text-xs mt-1 font-mono-data"
-                        placeholder="!help"
-                        value={selectedNodeData.config.command || ''}
-                        onChange={(e) => setNodes((prev) => prev.map((n) => n.id === selectedNode ? { ...n, config: { ...n.config, command: e.target.value } } : n))}
-                      />
+                  <div className="space-y-2">
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Command</Label>
+                        <Input
+                          className="h-7 text-xs mt-1 font-mono-data"
+                          placeholder="!help"
+                          value={selectedNodeData.config.command || ''}
+                          onChange={(e) =>
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === selectedNode
+                                  ? { ...n, config: { ...n.config, command: e.target.value } }
+                                  : n
+                              )
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Listen Channel ID (optional)</Label>
+                        <Input
+                          type="number"
+                          className="h-7 text-xs mt-1 font-mono-data"
+                          placeholder="42"
+                          value={selectedNodeData.config.channelId || ''}
+                          onChange={(e) =>
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === selectedNode
+                                  ? { ...n, config: { ...n.config, channelId: e.target.value } }
+                                  : n
+                              )
+                            )
+                          }
+                        />
+                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                          Commands are only received while a ServerQuery client is in that channel.
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -779,12 +812,23 @@ export default function BotEditor() {
                       )}
                       <div>
                         <Label className="text-[10px] text-muted-foreground">Message</Label>
-                        <Input
-                          className="h-7 text-xs mt-1"
-                          placeholder="Hello {{event.client_nickname}}"
+                        <Textarea
+                          className="min-h-[120px] text-xs mt-1 resize-y font-mono-data"
+                          placeholder={"Dies ist die HelpList:\n\n!create - erstellt einen Channel\n!delete - löscht deinen Channel\n!help - zeigt diese Liste"}
                           value={selectedNodeData.config.message || ''}
-                          onChange={(e) => setNodes((prev) => prev.map((n) => n.id === selectedNode ? { ...n, config: { ...n.config, message: e.target.value } } : n))}
+                          onChange={(e) =>
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === selectedNode
+                                  ? { ...n, config: { ...n.config, message: e.target.value } }
+                                  : n
+                              )
+                            )
+                          }
                         />
+                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                          Tipp: Zeilenumbrüche werden übernommen.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -826,8 +870,24 @@ export default function BotEditor() {
 
                   {selectedNodeData.type === 'action_move' && (
                     <div>
-                      <Label className="text-[10px] text-muted-foreground">Target Channel ID</Label>
-                      <Input type="number" className="h-7 text-xs mt-1 font-mono-data" placeholder="1" value={selectedNodeData.config.cid || ''} onChange={(e) => setNodes((prev) => prev.map((n) => n.id === selectedNode ? { ...n, config: { ...n.config, cid: parseInt(e.target.value) || 0 } } : n))} />
+                      <Label className="text-[10px] text-muted-foreground">Target Channel ID (or template)</Label>
+                      <Input
+                        className="h-7 text-xs mt-1 font-mono-data"
+                        placeholder="94  or  {{temp.lastCreatedChannelId}}"
+                        value={selectedNodeData.config.cid ?? ''}
+                        onChange={(e) =>
+                          setNodes((prev) =>
+                            prev.map((n) =>
+                              n.id === selectedNode
+                                ? { ...n, config: { ...n.config, cid: e.target.value } }
+                                : n
+                            )
+                          )
+                        }
+                      />
+                      <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                        Example: 94 or {"{{temp.lastCreatedChannelId}}"}
+                      </p>
                     </div>
                   )}
 

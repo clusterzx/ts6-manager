@@ -59,6 +59,7 @@ export interface CommandTriggerData {
   commandPrefix: string;
   commandName: string;
   description?: string;
+  channelId?: string;
 }
 
 // --- Action Types ---

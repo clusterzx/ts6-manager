@@ -70,7 +70,7 @@ function normalizeFlowData(raw: any): FlowDefinition {
       const cmd = config.command || '';
       const prefix = cmd.startsWith('!') ? '!' : config.commandPrefix || '!';
       const name = cmd.startsWith('!') ? cmd.substring(1) : cmd;
-      data = { triggerType: 'command', label, commandPrefix: prefix, commandName: name };
+      data = { triggerType: 'command', label, commandPrefix: prefix, commandName: name, channelId: config.channelId ? String(config.channelId) : undefined, };
     } else if (nodeType === 'action_kick') {
       type = 'action';
       data = { actionType: 'kick', label, reasonId: parseInt(config.reasonid) || 5, reasonMsg: config.reason || '' };
@@ -348,6 +348,8 @@ export class BotEngine {
         } else {
           console.log(`[BotEngine] SSH already connected for ${dbFlow.serverConfigId}:${dbFlow.virtualServerId}`);
         }
+        // NEW: start/stop per-channel command listeners for this pair
+        this.syncCommandListenersForPair(dbFlow.serverConfigId, dbFlow.virtualServerId);
       }
 
       // Setup cron jobs for this flow
@@ -493,19 +495,43 @@ export class BotEngine {
       this.eventBridge.connectServer(configId, sid).catch(err => {
         console.error(`[BotEngine] SSH connection failed for ${pair}: ${err.message}`);
       });
+      this.syncCommandListenersForPair(configId, sid);
     }
   }
 
   private async cleanupUnusedSshConnections(): Promise<void> {
-    const neededKeys = new Set<string>();
+    const neededPairs = new Set<string>();
     for (const flow of this.flows.values()) {
-      neededKeys.add(`${flow.serverConfigId}:${flow.virtualServerId}`);
+      neededPairs.add(`${flow.serverConfigId}:${flow.virtualServerId}`);
     }
 
+    // 1) cleanup unused ssh connections
     for (const key of this.eventBridge.getConnectedKeys()) {
-      if (!neededKeys.has(key)) {
+      if (!neededPairs.has(key)) {
         const [configId, sid] = key.split(':').map(Number);
         await this.eventBridge.disconnectServer(configId, sid);
+      }
+    }
+
+    // 2) sync command listeners per pair
+    for (const pair of neededPairs) {
+      const [configId, sid] = pair.split(':').map(Number);
+      this.syncCommandListenersForPair(configId, sid);
+    }
+
+    // 3) delete command listener for unused pairs
+    for (const cmdKey of this.eventBridge.getCommandListenerKeys()) {
+      // expected: `${configId}:${sid}:cmd:${channelId}`
+      const m = cmdKey.match(/^(\d+):(\d+):cmd:(\d+)$/);
+      if (!m) continue;
+
+      const configId = Number(m[1]);
+      const sid = Number(m[2]);
+      const channelId = Number(m[3]);
+
+      const pairKey = `${configId}:${sid}`;
+      if (!neededPairs.has(pairKey)) {
+        await this.eventBridge.disconnectCommandListener(configId, sid, channelId);
       }
     }
   }
@@ -540,22 +566,93 @@ export class BotEngine {
         // Command trigger (special case of text message)
         if (triggerData.triggerType === 'command' && eventName === 'notifytextmessage') {
           const cmdTrigger = triggerData as CommandTriggerData;
+
+          // Backward-compat:
+          // - if trigger has NO channelId => only react to base connection events
+          // - if trigger HAS channelId => only react if event came from that cmd listener OR matches target
+          const sourceListenerCid = data.__cmd_listener_channel_id;
+
+          if (!cmdTrigger.channelId) {
+            if (sourceListenerCid) continue;
+          } else {
+            const required = String(cmdTrigger.channelId);
+
+            // For channel-specific commands: only accept events coming from the dedicated cmd listener
+            if (!sourceListenerCid) continue;
+            if (sourceListenerCid !== required) continue;
+          }
+
           const msg = data.msg || '';
           const fullCommand = (cmdTrigger.commandPrefix || '!') + cmdTrigger.commandName;
-
           if (!msg.startsWith(fullCommand)) continue;
 
-          // Check that the command is followed by a space or is the entire message
           const afterCmd = msg.substring(fullCommand.length);
           if (afterCmd.length > 0 && afterCmd[0] !== ' ') continue;
 
           const args = afterCmd.trim();
-          const enrichedData = { ...data, command_args: args, command_name: cmdTrigger.commandName };
+          const enrichedData = {
+            ...data,
+            command_args: args,
+            command_name: cmdTrigger.commandName,
+            command_channel_id: data.__cmd_listener_channel_id || cmdTrigger.channelId || data.target || '',
+          };
+
+          const invoker =
+            data.clid ||
+            data.invokerid ||
+            data.invoker_id ||
+            data.invokerId ||
+            data.client_id ||
+            data.clientId;
+
+          if (invoker && !data.clid) {
+            
+            (enrichedData as any).clid = String(invoker);
+          }
+
           this.executeFlow(flow, triggerNode.id, 'command', enrichedData);
         }
       }
     }
   }
+
+
+  private getNeededCommandChannelIds(configId: number, sid: number): number[] {
+    const ids = new Set<number>();
+
+    for (const flow of this.flows.values()) {
+      if (flow.serverConfigId !== configId || flow.virtualServerId !== sid) continue;
+
+      for (const t of flow.triggerNodes) {
+        const td: any = t.data;
+        if (td?.triggerType === 'command' && td.channelId) {
+          const n = parseInt(String(td.channelId), 10);
+          if (Number.isFinite(n) && n > 0) ids.add(n);
+        }
+      }
+    }
+    return Array.from(ids);
+  }
+
+  private syncCommandListenersForPair(configId: number, sid: number): void {
+    const needed = new Set(this.getNeededCommandChannelIds(configId, sid));
+    const existing = new Set(this.eventBridge.getCommandListenerChannelIds(configId, sid));
+
+    for (const cid of needed) {
+      if (!existing.has(cid)) {
+        this.eventBridge.connectCommandListener(configId, sid, cid).catch(err => {
+          console.error(`[BotEngine] CMD listener connect failed for ${configId}:${sid}:${cid}: ${err.message}`);
+        });
+      }
+    }
+
+    for (const cid of existing) {
+      if (!needed.has(cid)) {
+        this.eventBridge.disconnectCommandListener(configId, sid, cid).catch(() => { });
+      }
+    }
+  }
+
 
   private executeFlow(flow: LoadedFlow, triggerNodeId: string, triggerType: string, eventData: Record<string, string>): void {
     console.log(`[BotEngine] Executing flow ${flow.id} ('${flow.name}') triggered by ${triggerType}`);

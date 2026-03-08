@@ -199,6 +199,9 @@ export class MusicCommandHandler {
 
       bot.queue.add(queueItem);
 
+      // Save to MusicRequest history
+      this.saveMusicRequest(bot, queueItem);
+
       // If something is already playing, queue it instead of interrupting
       if (bot.status === 'playing' || bot.status === 'paused') {
         this.reply(bot, userClid, `Queued: ${info.artist} - ${info.title} (position #${bot.queue.length})`);
@@ -254,6 +257,9 @@ export class MusicCommandHandler {
       };
 
       bot.queue.add(queueItem);
+
+      // Save to MusicRequest history
+      this.saveMusicRequest(bot, queueItem);
 
       // If nothing is playing, start playing the queued item
       if (bot.status !== 'playing' && bot.status !== 'paused') {
@@ -340,5 +346,29 @@ export class MusicCommandHandler {
 
     const artist = np.artist ? `${np.artist} - ` : '';
     this.reply(bot, userClid, `Now playing: ${artist}${np.title}`);
+  }
+
+  private saveMusicRequest(bot: VoiceBot, item: QueueItem): void {
+    if (!item.sourceUrl || !bot.currentConfig.serverConfigId) return;
+    this.prisma.musicRequest.upsert({
+      where: {
+        serverConfigId_url: {
+          serverConfigId: bot.currentConfig.serverConfigId,
+          url: item.sourceUrl,
+        },
+      },
+      update: {
+        requestedAt: new Date(),
+        title: item.title || 'Unknown Title',
+      },
+      create: {
+        serverConfigId: bot.currentConfig.serverConfigId,
+        url: item.sourceUrl,
+        title: item.title || 'Unknown Title',
+        requestedAt: new Date(),
+      },
+    }).catch((err) => {
+      console.error('[MusicCmd] Failed to save music request history:', err.message);
+    });
   }
 }

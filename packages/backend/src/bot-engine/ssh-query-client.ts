@@ -2,6 +2,7 @@ import { Client as SSH2Client, type ClientChannel } from 'ssh2';
 import { EventEmitter } from 'events';
 import { parseQueryResponse } from '@ts6/common';
 import { TS_EVENT_TYPES } from '@ts6/common';
+import crypto from 'crypto';
 
 export interface SshQueryClientOptions {
   host: string;
@@ -42,6 +43,7 @@ export class SshQueryClient extends EventEmitter {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private keepaliveTimer: ReturnType<typeof setInterval> | null = null;
   private fatalError: boolean = false;
+  private readonly nickSuffix = crypto.randomBytes(3).toString('hex'); // z.B. "a1b2c3"
   private reconnecting: boolean = false;
 
   constructor(private options: SshQueryClientOptions) {
@@ -63,7 +65,7 @@ export class SshQueryClient extends EventEmitter {
           console.error(`[SshQueryClient] ${err.message}`);
           this.emit('error', err);
           reject(err);
-          try { this.ssh?.end(); } catch {}
+          try { this.ssh?.end(); } catch { }
         }
       }, 15000);
 
@@ -184,10 +186,8 @@ export class SshQueryClient extends EventEmitter {
 
     // Set nickname so the bot is identifiable, and mark as query client type
     try {
-      await this.executeCommand('clientupdate client_nickname=TS6-WebUI-Bot');
-    } catch {
-      // Nickname might already be taken; not critical
-    }
+      await this.executeCommand(`clientupdate client_nickname=TS6-WebUI-Bot-${sid}-${this.nickSuffix}`);
+    } catch { }
 
     for (const eventType of TS_EVENT_TYPES) {
       const cmd = eventType === 'channel'
@@ -204,6 +204,59 @@ export class SshQueryClient extends EventEmitter {
     }
 
     console.log(`[SshQueryClient] Events registered for sid=${sid}`);
+  }
+
+  async registerCommandListener(sid: number, channelId: number): Promise<void> {
+    console.log(`[SshQueryClient] Registering command listener for sid=${sid}, channelId=${channelId} on ${this.options.host}`);
+
+    await this.executeCommand(`use sid=${sid}`);
+
+   
+    try {
+      await this.executeCommand(`clientupdate client_nickname=TS6-WebUI-Cmd-${channelId}-${this.nickSuffix}`);
+    } catch (err: any) {
+      if (String(err.message || '').toLowerCase().includes('nickname')) {
+        const extra = crypto.randomBytes(2).toString('hex');
+        try {
+          await this.executeCommand(`clientupdate client_nickname=TS6-WebUI-Cmd-${channelId}-${this.nickSuffix}-${extra}`);
+        } catch { }
+      }
+    }
+
+    // Move query client into the channel (required for channel chat notifications)
+    try {
+      const who = await this.executeCommand('whoami');
+      const first = (who.split('\n')[0] || '').trim();
+      const me = parseQueryResponse(first)[0] || {};
+      const clid =
+        me.clid ??
+        me.client_id ??
+        me.clientid ??
+        me.clientId ??
+        (() => {
+          const m = first.match(/(?:clid|client_id)=(\d+)/);
+          return m?.[1];
+        })();
+
+      if (clid) {
+        await this.executeCommand(`clientmove clid=${clid} cid=${channelId}`);
+      } else {
+        console.warn('[SshQueryClient] whoami did not return clid; cannot clientmove');
+      }
+    } catch (err: any) {
+      console.warn(`[SshQueryClient] Failed to move query client to channel ${channelId}: ${err.message}`);
+    }
+
+    // Register ONLY textchannel for this channel
+    try {
+      await this.executeCommand(`servernotifyregister event=textchannel id=${channelId}`);
+    } catch (err: any) {
+      if (!err.message?.includes('516')) {
+        console.warn(`[SshQueryClient] Failed to register textchannel for channel ${channelId}: ${err.message}`);
+      }
+    }
+
+    console.log(`[SshQueryClient] Command listener ready for sid=${sid}, channelId=${channelId}`);
   }
 
   get isConnected(): boolean {

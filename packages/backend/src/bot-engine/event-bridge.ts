@@ -126,11 +126,86 @@ export class EventBridge extends EventEmitter {
     return Array.from(this.connections.keys());
   }
 
+  private commandListeners: Map<string, SshQueryClient> = new Map();
+
+  private makeCmdKey(configId: number, sid: number, channelId: number): string {
+    return `${configId}:${sid}:cmd:${channelId}`;
+  }
+
+  async connectCommandListener(configId: number, sid: number, channelId: number): Promise<void> {
+    const key = this.makeCmdKey(configId, sid, channelId);
+    if (this.commandListeners.has(key)) return;
+
+    const serverConfig = await this.prisma.tsServerConfig.findUnique({ where: { id: configId } });
+    if (!serverConfig?.sshUsername || !serverConfig.sshPassword || !serverConfig.sshPort) return;
+
+    const client = new SshQueryClient({
+      host: serverConfig.host,
+      port: serverConfig.sshPort,
+      username: serverConfig.sshUsername,
+      password: decrypt(serverConfig.sshPassword),
+    });
+
+    client.on('ready', async () => {
+      console.log(`[EventBridge] CMD listener SSH connected for ${key}`);
+      try {
+        await client.registerCommandListener(sid, channelId);
+      } catch (err: any) {
+        console.error(`[EventBridge] CMD listener register failed for ${key}: ${err.message}`);
+      }
+    });
+
+    client.on('event', (eventName: string, data: Record<string, string>) => {
+      // Marker so engine can keep backward compatibility:
+      // triggers WITHOUT channelId should only react to base connection events
+      const enriched = { ...data, __cmd_listener_channel_id: String(channelId) };
+      this.emit('tsEvent', configId, sid, eventName, enriched);
+    });
+
+    client.on('error', (err: Error) => console.error(`[EventBridge] CMD listener SSH error for ${key}: ${err.message}`));
+    client.on('close', () => console.log(`[EventBridge] CMD listener SSH disconnected for ${key}`));
+
+    this.commandListeners.set(key, client);
+    try { await client.connect(); } catch (err: any) {
+      console.error(`[EventBridge] CMD listener initial connect failed for ${key}: ${err.message}`);
+      if (client.hasFatalError) this.commandListeners.delete(key);
+    }
+  }
+
+  async disconnectCommandListener(configId: number, sid: number, channelId: number): Promise<void> {
+    const key = this.makeCmdKey(configId, sid, channelId);
+    const client = this.commandListeners.get(key);
+    if (client) {
+      client.destroy();
+      this.commandListeners.delete(key);
+    }
+  }
+
+  getCommandListenerChannelIds(configId: number, sid: number): number[] {
+    const prefix = `${configId}:${sid}:cmd:`;
+    return Array.from(this.commandListeners.keys())
+      .filter(k => k.startsWith(prefix))
+      .map(k => parseInt(k.split(':').pop() || '0', 10))
+      .filter(n => Number.isFinite(n) && n > 0);
+  }
+
+  getCommandListenerKeys(): string[] {
+    return Array.from(this.commandListeners.keys());
+  }
+
   destroy(): void {
-    for (const [key, client] of this.connections.entries()) {
+  // existing "base" SSH connections
+    for (const client of this.connections.values()) {
       client.destroy();
     }
     this.connections.clear();
+
+    // NEW: command listener SSH connections
+    for (const client of this.commandListeners.values()) {
+      client.destroy();
+    }
+    this.commandListeners.clear();
+
     this.removeAllListeners();
   }
 }

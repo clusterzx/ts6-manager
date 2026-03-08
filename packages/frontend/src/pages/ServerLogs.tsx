@@ -12,10 +12,10 @@ import { ScrollText, RefreshCw, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const LEVEL_COLORS: Record<string, string> = {
-  ERROR: 'text-red-400 bg-red-500/10 border-red-500/20',
-  WARNING: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-  INFO: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-  DEBUG: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20',
+  ERROR: 'text-destructive bg-destructive/10 border-destructive/20',
+  WARNING: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+  INFO: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+  DEBUG: 'text-muted-foreground bg-muted/50 border-border/50',
 };
 
 function parseLevel(line: string): string {
@@ -90,7 +90,7 @@ export default function ServerLogs() {
         </Select>
       </div>
 
-      <div className="rounded-md border border-border bg-zinc-950/50 overflow-hidden">
+      <div className="rounded-md border border-border bg-card overflow-hidden shadow-sm">
         <ScrollArea className="h-[calc(100vh-260px)]">
           <div className="p-3 space-y-0.5">
             {logs.length === 0 ? (
