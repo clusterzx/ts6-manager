@@ -534,25 +534,29 @@ export class VoiceBot extends EventEmitter {
     const dt = this.lastVoiceSendAt ? (now - this.lastVoiceSendAt) : 0;
     this.lastVoiceSendAt = now;
 
-    // 1s stats
-    if (!this.statWindowStart) this.statWindowStart = now;
-    if (dt > 0) {
-      this.statCount++;
-      this.statDtSum += dt;
-      this.statDtMin = Math.min(this.statDtMin, dt);
-      this.statDtMax = Math.max(this.statDtMax, dt);
-    }
+    const VOICE_DEBUG = process.env.VOICE_DEBUG === '1';
 
-    if (now - this.statWindowStart >= 1000) {
-      const avg = this.statCount ? (this.statDtSum / this.statCount) : 0;
-      console.log(
-        `[voice] rate=${this.statCount}/s avg=${avg.toFixed(1)}ms min=${this.statDtMin.toFixed(1)} max=${this.statDtMax.toFixed(1)} streaming=${this._isStreaming}`
-      );
-      this.statWindowStart = now;
-      this.statCount = 0;
-      this.statDtSum = 0;
-      this.statDtMin = Number.POSITIVE_INFINITY;
-      this.statDtMax = 0;
+    if (VOICE_DEBUG) {
+      // 1s stats
+      if (!this.statWindowStart) this.statWindowStart = now;
+      if (dt > 0) {
+        this.statCount++;
+        this.statDtSum += dt;
+        this.statDtMin = Math.min(this.statDtMin, dt);
+        this.statDtMax = Math.max(this.statDtMax, dt);
+      }
+
+      if (now - this.statWindowStart >= 1000) {
+        const avg = this.statCount ? (this.statDtSum / this.statCount) : 0;
+        console.log(
+          `[voice] rate=${this.statCount}/s avg=${avg.toFixed(1)}ms min=${this.statDtMin.toFixed(1)} max=${this.statDtMax.toFixed(1)} streaming=${this._isStreaming}`
+        );
+        this.statWindowStart = now;
+        this.statCount = 0;
+        this.statDtSum = 0;
+        this.statDtMin = Number.POSITIVE_INFINITY;
+        this.statDtMax = 0;
+      }
     }
 
     this.client.sendVoice(opusFrame);
