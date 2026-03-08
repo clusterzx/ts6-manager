@@ -27,6 +27,7 @@ import { musicBotRoutes } from './routes/music-bots.routes.js';
 import { musicLibraryRoutes } from './routes/music-library.routes.js';
 import { playlistRoutes } from './routes/playlists.routes.js';
 import { radioStationRoutes } from './routes/radio-stations.routes.js';
+import { musicRequestRoutes } from './routes/music-requests.routes.js';
 import { widgetPublicRoutes } from './routes/widget-public.routes.js';
 import { widgetRoutes } from './routes/widget.routes.js';
 import { setupRoutes } from './routes/setup.routes.js';
@@ -98,6 +99,7 @@ export function createApp(): Express {
   app.use('/api/servers/:configId/music-library', serverAccess, musicLibraryRoutes);
   app.use('/api/playlists', playlistRoutes);
   app.use('/api/servers/:configId/radio-stations', serverAccess, radioStationRoutes);
+  app.use('/api/servers/:configId/music-requests', serverAccess, musicRequestRoutes);
   app.use('/api/widgets', widgetRoutes);
 
   // Error handler (must be last)

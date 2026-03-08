@@ -40,6 +40,7 @@ const Instance = lazy(() => import('@/pages/Instance'));
 const BotList = lazy(() => import('@/pages/BotList'));
 const BotEditor = lazy(() => import('@/pages/BotEditor'));
 const MusicBots = lazy(() => import('@/pages/MusicBots'));
+const MusicRequests = lazy(() => import('@/pages/MusicRequests'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 const WidgetPage = lazy(() => import('@/pages/WidgetPage'));
@@ -71,6 +72,7 @@ export function App() {
               <Route path="/messages" element={<AdminRoute><Messages /></AdminRoute>} />
               <Route path="/logs" element={<AdminRoute><ServerLogs /></AdminRoute>} />
               <Route path="/instance" element={<AdminRoute><Instance /></AdminRoute>} />
+              <Route path="/music-requests" element={<AdminRoute><MusicRequests /></AdminRoute>} />
               <Route path="/bots" element={<AdminRoute><BotList /></AdminRoute>} />
               <Route path="/bots/:botId" element={<AdminRoute><BotEditor /></AdminRoute>} />
               <Route path="/music-bots" element={<AdminRoute><MusicBots /></AdminRoute>} />

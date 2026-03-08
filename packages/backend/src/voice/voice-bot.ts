@@ -13,6 +13,7 @@ export interface PlaybackProgress {
 
 export interface VoiceBotConfig {
   id: number;
+  serverConfigId: number;
   name: string;
   serverHost: string;
   serverPort: number;

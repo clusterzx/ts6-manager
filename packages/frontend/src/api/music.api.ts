@@ -15,6 +15,7 @@ export const musicBotsApi = {
   // Playback
   playRadio: (id: number, stationId: number) => api.post(`/music-bots/${id}/play-radio`, { stationId }).then((r) => r.data),
   play: (id: number, songId: number) => api.post(`/music-bots/${id}/play`, { songId }).then((r) => r.data),
+  playUrl: (id: number, url: string) => api.post(`/music-bots/${id}/play-url`, { url }).then((r) => r.data),
   pause: (id: number) => api.post(`/music-bots/${id}/pause`).then((r) => r.data),
   resume: (id: number) => api.post(`/music-bots/${id}/resume`).then((r) => r.data),
   stopPlayback: (id: number) => api.post(`/music-bots/${id}/stop-playback`).then((r) => r.data),

@@ -54,6 +54,7 @@ export class VoiceBotManager extends EventEmitter {
       }
       const config: VoiceBotConfig = {
         id: dbBot.id,
+        serverConfigId: dbBot.serverConfigId,
         name: dbBot.name,
         serverHost: dbBot.serverConfig.host,
         serverPort: dbBot.voicePort ?? 9987,
@@ -187,6 +188,7 @@ export class VoiceBotManager extends EventEmitter {
 
     const config: VoiceBotConfig = {
       id: dbBot.id,
+      serverConfigId: data.serverConfigId,
       name: dbBot.name,
       serverHost: serverConfig.host,
       serverPort: dbBot.voicePort ?? 9987,
