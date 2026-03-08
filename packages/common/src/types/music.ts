@@ -11,6 +11,7 @@ export interface MusicBotSummary {
   serverPassword: string | null;
   defaultChannel: string | null;
   channelPassword: string | null;
+  voicePort: number;
   volume: number;
   autoStart: boolean;
   status: VoiceBotStatus;
@@ -30,6 +31,7 @@ export interface CreateMusicBotRequest {
   serverPassword?: string;
   defaultChannel?: string;
   channelPassword?: string;
+  voicePort?: number;
   volume?: number;
   autoStart?: boolean;
 }
@@ -40,6 +42,7 @@ export interface UpdateMusicBotRequest {
   serverPassword?: string;
   defaultChannel?: string;
   channelPassword?: string;
+  voicePort?: number;
   volume?: number;
   autoStart?: boolean;
 }

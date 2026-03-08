@@ -7,7 +7,9 @@ import { BotEngine } from './bot-engine/engine.js';
 import { VoiceBotManager } from './voice/voice-bot-manager.js';
 import { MusicCommandHandler } from './voice/music-command-handler.js';
 import { config } from './config.js';
+import { setYtCookieFile } from './voice/audio/youtube.js';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
 
 async function main() {
   // C1: JWT secret startup guard
@@ -17,6 +19,17 @@ async function main() {
       process.exit(1);
     }
     console.warn('[WARN] JWT_SECRET is using the default development value. Set JWT_SECRET in production!');
+  }
+
+  // Configure yt-dlp cookie file if provided
+  const cookiePath = process.env.YT_COOKIE_FILE;
+  if (cookiePath) {
+    if (fs.existsSync(cookiePath)) {
+      setYtCookieFile(cookiePath);
+      console.log(`[yt-dlp] Using cookie file: ${cookiePath}`);
+    } else {
+      console.warn(`[yt-dlp] Cookie file not found: ${cookiePath}`);
+    }
   }
 
   const prisma = new PrismaClient();

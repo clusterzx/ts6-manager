@@ -144,6 +144,7 @@ model MusicBot {
   serverPassword  String?
   defaultChannel  String?
   channelPassword String?
+  voicePort       Int       @default(9987)
   volume          Int       @default(50)
   identityData    String?
   autoStart       Boolean   @default(false)
@@ -213,6 +214,7 @@ model Widget {
   theme           String         @default("dark")
   showChannelTree Boolean        @default(true)
   showClients     Boolean        @default(true)
+  hideEmptyChannels Boolean      @default(false)
   maxChannelDepth Int            @default(5)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt

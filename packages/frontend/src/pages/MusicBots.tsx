@@ -422,7 +422,7 @@ function BotsTab() {
 
   // Create form
   const [form, setForm] = useState({
-    name: '', serverConfigId: '', nickname: 'MusicBot', serverPassword: '', defaultChannel: '', channelPassword: '', volume: 50, autoStart: false,
+    name: '', serverConfigId: '', nickname: 'MusicBot', serverPassword: '', defaultChannel: '', channelPassword: '', voicePort: 9987, volume: 50, autoStart: false,
   });
 
   const bots = Array.isArray(data) ? data : [];
@@ -440,6 +440,7 @@ function BotsTab() {
       serverPassword: form.serverPassword || undefined,
       defaultChannel: form.defaultChannel || undefined,
       channelPassword: form.channelPassword || undefined,
+      voicePort: form.voicePort,
       volume: form.volume,
       autoStart: form.autoStart,
     }, {
@@ -456,6 +457,7 @@ function BotsTab() {
       serverPassword: form.serverPassword || undefined,
       defaultChannel: form.defaultChannel || undefined,
       channelPassword: form.channelPassword || undefined,
+      voicePort: form.voicePort,
       volume: form.volume,
       autoStart: form.autoStart,
     }}, {
@@ -464,7 +466,7 @@ function BotsTab() {
     });
   };
 
-  const resetForm = () => setForm({ name: '', serverConfigId: '', nickname: 'MusicBot', serverPassword: '', defaultChannel: '', channelPassword: '', volume: 50, autoStart: false });
+  const resetForm = () => setForm({ name: '', serverConfigId: '', nickname: 'MusicBot', serverPassword: '', defaultChannel: '', channelPassword: '', voicePort: 9987, volume: 50, autoStart: false });
 
   return (
     <div className="space-y-4">
@@ -491,6 +493,7 @@ function BotsTab() {
                   serverPassword: bot.serverPassword || '',
                   defaultChannel: bot.defaultChannel || '',
                   channelPassword: bot.channelPassword || '',
+                  voicePort: bot.voicePort ?? 9987,
                   volume: bot.volume,
                   autoStart: bot.autoStart,
                 });
@@ -525,6 +528,10 @@ function BotsTab() {
                 </Select>
               </div>
             )}
+            <div>
+              <Label className="text-xs">Voice Port</Label>
+              <Input type="number" value={form.voicePort} onChange={(e) => setForm({ ...form, voicePort: parseInt(e.target.value) || 9987 })} placeholder="9987" />
+            </div>
             <div>
               <Label className="text-xs">Nickname</Label>
               <Input value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="MusicBot" />
@@ -903,7 +910,7 @@ function LibraryTab() {
         <EmptyState icon={Music} title="No songs yet" description="Upload audio files or download from YouTube to build your library." />
       ) : (
         <div className="border rounded-lg overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-3 py-2 bg-muted/50 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] gap-2 px-3 py-2 bg-muted/50 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             <span>Title</span>
             <span className="w-20 text-right">Duration</span>
             <span className="w-16 text-center">Source</span>
@@ -912,7 +919,7 @@ function LibraryTab() {
           </div>
           <ScrollArea className="max-h-[400px]">
             {filtered.map((song) => (
-              <div key={song.id} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-3 py-2 hover:bg-muted/30 transition-colors items-center border-t border-border/50">
+              <div key={song.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] gap-2 px-3 py-2 hover:bg-muted/30 transition-colors items-center border-t border-border/50">
                 <div className="min-w-0">
                   <p className="text-xs font-medium truncate">{song.title}</p>
                   {song.artist && <p className="text-[10px] text-muted-foreground truncate">{song.artist}</p>}
@@ -1338,7 +1345,7 @@ function RadioTab() {
             <DialogTitle>Radio Presets</DialogTitle>
             <DialogDescription>Add popular radio stations with one click.</DialogDescription>
           </DialogHeader>
-          <div className="flex-1 max-h-[400px] overflow-y-auto">
+          <ScrollArea className="flex-1 max-h-[400px]">
             {presetList.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8">No presets available.</p>
             ) : presetList.map((preset, i) => (
@@ -1356,7 +1363,7 @@ function RadioTab() {
                 </Button>
               </div>
             ))}
-          </div>
+          </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPresets(false)}>Done</Button>
           </DialogFooter>

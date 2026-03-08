@@ -19,6 +19,17 @@ export interface YouTubeSearchResult {
   thumbnail: string;
 }
 
+// Shared cookie file path (set from settings)
+let ytCookieFile: string | null = null;
+
+export function setYtCookieFile(filePath: string | null): void {
+  ytCookieFile = filePath;
+}
+
+function getCookieArgs(): string[] {
+  return ytCookieFile ? ["--cookies", ytCookieFile] : [];
+}
+
 /**
  * Download audio from a YouTube URL using yt-dlp
  */
@@ -28,7 +39,8 @@ export function downloadYouTube(url: string, outputDir: string): Promise<{ fileP
 
     // First get info
     const infoProc = spawn("yt-dlp", [
-      "--dump-json",
+        ...getCookieArgs(),
+        "--dump-json",
       "--no-playlist",
       url,
     ], { shell: false });
@@ -72,6 +84,7 @@ export function downloadYouTube(url: string, outputDir: string): Promise<{ fileP
 
       // Download audio only
       const dlProc = spawn("yt-dlp", [
+        ...getCookieArgs(),
         "-x",                       // extract audio
         "--audio-format", "opus",   // opus format (native for TS3)
         "--audio-quality", "0",     // best quality
@@ -118,7 +131,8 @@ export function downloadYouTube(url: string, outputDir: string): Promise<{ fileP
 export function getYouTubeUrlInfo(url: string): Promise<{ type: 'video' | 'playlist'; items: YouTubeSearchResult[] }> {
   return new Promise((resolve, reject) => {
     const proc = spawn("yt-dlp", [
-      "--dump-json",
+        ...getCookieArgs(),
+        "--dump-json",
       "--flat-playlist",
       "--no-download",
       url,
@@ -170,7 +184,8 @@ export function getYouTubeUrlInfo(url: string): Promise<{ type: 'video' | 'playl
 export function searchYouTube(query: string, maxResults: number = 10): Promise<YouTubeSearchResult[]> {
   return new Promise((resolve, reject) => {
     const proc = spawn("yt-dlp", [
-      `ytsearch${maxResults}:${query}`,
+        ...getCookieArgs(),
+        `ytsearch${maxResults}:${query}`,
       "--dump-json",
       "--flat-playlist",
       "--no-download",

@@ -30,6 +30,7 @@ musicBotRoutes.get('/', async (req: Request, res: Response, next) => {
         serverConfig: b.serverConfig,
         nickname: b.nickname,
         defaultChannel: b.defaultChannel,
+        voicePort: b.voicePort,
         volume: b.volume,
         autoStart: b.autoStart,
         status: runtime?.status ?? 'stopped',
@@ -67,7 +68,7 @@ musicBotRoutes.get('/:id', async (req: Request, res: Response, next) => {
 musicBotRoutes.post('/', async (req: Request, res: Response, next) => {
   try {
     const manager: VoiceBotManager = req.app.locals.voiceBotManager;
-    const { name, serverConfigId, nickname, serverPassword, defaultChannel, channelPassword, volume, autoStart } = req.body;
+    const { name, serverConfigId, nickname, serverPassword, defaultChannel, channelPassword, voicePort, volume, autoStart } = req.body;
     if (!name || !serverConfigId) throw new AppError(400, 'name and serverConfigId are required');
 
     const result = await manager.createBot({
@@ -77,6 +78,7 @@ musicBotRoutes.post('/', async (req: Request, res: Response, next) => {
       serverPassword,
       defaultChannel,
       channelPassword,
+      voicePort: voicePort != null ? parseInt(voicePort) : undefined,
       volume: volume != null ? parseInt(volume) : undefined,
       autoStart: autoStart ?? false,
     });
@@ -91,7 +93,7 @@ musicBotRoutes.put('/:id', async (req: Request, res: Response, next) => {
     const prisma = req.app.locals.prisma;
     const manager: VoiceBotManager = req.app.locals.voiceBotManager;
     const id = parseInt(req.params.id as string);
-    const { name, nickname, serverPassword, defaultChannel, channelPassword, volume, autoStart } = req.body;
+    const { name, nickname, serverPassword, defaultChannel, channelPassword, voicePort, volume, autoStart } = req.body;
 
     const dbBot = await prisma.musicBot.update({
       where: { id },
@@ -101,6 +103,7 @@ musicBotRoutes.put('/:id', async (req: Request, res: Response, next) => {
         ...(serverPassword !== undefined && { serverPassword }),
         ...(defaultChannel !== undefined && { defaultChannel }),
         ...(channelPassword !== undefined && { channelPassword }),
+        ...(voicePort != null && { voicePort: parseInt(voicePort) }),
         ...(volume != null && { volume: parseInt(volume) }),
         ...(autoStart != null && { autoStart }),
       },
@@ -115,6 +118,7 @@ musicBotRoutes.put('/:id', async (req: Request, res: Response, next) => {
         ...(serverPassword !== undefined && { serverPassword: serverPassword || undefined }),
         ...(defaultChannel !== undefined && { defaultChannel: defaultChannel || undefined }),
         ...(channelPassword !== undefined && { channelPassword: channelPassword || undefined }),
+        ...(voicePort != null && { serverPort: parseInt(voicePort) }),
         ...(volume != null && { volume: parseInt(volume) }),
       });
     }

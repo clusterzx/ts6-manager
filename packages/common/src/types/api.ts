@@ -142,7 +142,7 @@ export interface CreateBanRequest {
 
 // Token
 export interface CreateTokenRequest {
-  tokentype: 0 | 1; // 0=server group, 1=channel group
+  tokentype: 0 | 1; // 0=server group, 1=channel group tokens)
   tokenid1: number; // group id
   tokenid2: number; // channel id (for channel group tokens)
   tokendescription?: string;
@@ -214,6 +214,7 @@ export interface WidgetConfig {
   theme: WidgetTheme;
   showChannelTree: boolean;
   showClients: boolean;
+  hideEmptyChannels: boolean;
   maxChannelDepth: number;
   createdAt: string;
   updatedAt: string;
@@ -226,6 +227,7 @@ export interface CreateWidgetRequest {
   theme?: WidgetTheme;
   showChannelTree?: boolean;
   showClients?: boolean;
+  hideEmptyChannels?: boolean;
   maxChannelDepth?: number;
 }
 
@@ -234,11 +236,14 @@ export interface UpdateWidgetRequest {
   theme?: WidgetTheme;
   showChannelTree?: boolean;
   showClients?: boolean;
+  hideEmptyChannels?: boolean;
   maxChannelDepth?: number;
 }
 
 export interface WidgetData {
   serverName: string;
+  serverHost: string;
+  serverPort: number;
   onlineUsers: number;
   maxClients: number;
   uptime: number;
@@ -255,6 +260,9 @@ export interface WidgetChannelNode {
   cid: number;
   name: string;
   hasPassword: boolean;
+  isspacer: boolean;
+  spacerType: 'line' | 'dotline' | 'dashline' | 'center' | 'left' | 'right' | 'none';
+  spacerText: string;
   clients: WidgetClient[];
   children: WidgetChannelNode[];
 }

@@ -11,6 +11,7 @@ services:
       - DATABASE_URL=file:/app/packages/backend/data/ts6webui.db
       - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in Coolify environment variables}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - TS_ALLOW_SELF_SIGNED=${TS_ALLOW_SELF_SIGNED:-false}
       - JWT_ACCESS_EXPIRY=15m
       - JWT_REFRESH_EXPIRY=7d
       - FRONTEND_URL=${FRONTEND_URL:-https://ts6.example.com}

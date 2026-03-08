@@ -9,7 +9,7 @@ const CMD_PREFIX = '!';
 
 const MUSIC_COMMANDS = new Set([
   'radio', 'play', 'stop', 'pause', 'skip', 'next', 'prev',
-  'vol', 'volume', 'np', 'nowplaying',
+  'vol', 'volume', 'np', 'nowplaying', 'queue', 'add',
 ]);
 
 /**
@@ -93,6 +93,10 @@ export class MusicCommandHandler {
         case 'np':
         case 'nowplaying':
           this.handleNowPlaying(bot, userClid);
+          break;
+        case 'queue':
+        case 'add':
+          await this.handleQueue(bot, userClid, args);
           break;
       }
     } catch (err: any) {
@@ -194,12 +198,73 @@ export class MusicCommandHandler {
       };
 
       bot.queue.add(queueItem);
-      bot.queue.playAt(bot.queue.length - 1);
-      await bot.play(queueItem);
 
-      this.reply(bot, userClid, `Now playing: ${info.artist} - ${info.title}`);
+      // If something is already playing, queue it instead of interrupting
+      if (bot.status === 'playing' || bot.status === 'paused') {
+        this.reply(bot, userClid, `Queued: ${info.artist} - ${info.title} (position #${bot.queue.length})`);
+      } else {
+        bot.queue.playAt(bot.queue.length - 1);
+        await bot.play(queueItem);
+        this.reply(bot, userClid, `Now playing: ${info.artist} - ${info.title}`);
+      }
     } catch (err: any) {
       this.reply(bot, userClid, `Failed to play: ${err.message}`);
+    }
+  }
+
+  private async handleQueue(bot: VoiceBot, userClid: number, args: string): Promise<void> {
+    // No args — show current queue
+    if (!args) {
+      const items = bot.queue.getAll();
+      if (items.length === 0) {
+        this.reply(bot, userClid, 'Queue is empty.');
+        return;
+      }
+
+      const np = bot.nowPlaying;
+      const lines = items.slice(0, 15).map((item, i) => {
+        const marker = np && item.id === np.id ? '▶ ' : '  ';
+        const artist = item.artist ? `${item.artist} - ` : '';
+        return `${marker}${i + 1}. ${artist}${item.title}`;
+      });
+      if (items.length > 15) lines.push(`  ... and ${items.length - 15} more`);
+      this.reply(bot, userClid, `Queue (${items.length} tracks):\n${lines.join('\n')}`);
+      return;
+    }
+
+    // URL provided — add to queue without interrupting
+    if (!args.startsWith('http://') && !args.startsWith('https://')) {
+      this.reply(bot, userClid, 'Usage: !queue [url] — Show queue or add a song.');
+      return;
+    }
+
+    this.reply(bot, userClid, 'Loading...');
+
+    try {
+      const { filePath, info } = await downloadYouTube(args, MUSIC_DIR);
+
+      const queueItem: QueueItem = {
+        id: `yt_${info.id}`,
+        title: info.title,
+        artist: info.artist,
+        duration: info.duration,
+        filePath,
+        source: 'youtube',
+        sourceUrl: args,
+      };
+
+      bot.queue.add(queueItem);
+
+      // If nothing is playing, start playing the queued item
+      if (bot.status !== 'playing' && bot.status !== 'paused') {
+        bot.queue.playAt(bot.queue.length - 1);
+        await bot.play(queueItem);
+        this.reply(bot, userClid, `Now playing: ${info.artist} - ${info.title}`);
+      } else {
+        this.reply(bot, userClid, `Queued: ${info.artist} - ${info.title} (position #${bot.queue.length})`);
+      }
+    } catch (err: any) {
+      this.reply(bot, userClid, `Failed to queue: ${err.message}`);
     }
   }
 

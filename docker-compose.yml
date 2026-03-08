@@ -11,6 +11,8 @@ services:
       - DATABASE_URL=file:/app/packages/backend/data/ts6webui.db
       - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env or environment}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - TS_ALLOW_SELF_SIGNED=${TS_ALLOW_SELF_SIGNED:-false}
+      - YT_COOKIE_FILE=${YT_COOKIE_FILE:-}
       - JWT_ACCESS_EXPIRY=15m
       - JWT_REFRESH_EXPIRY=7d
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
@@ -18,6 +20,8 @@ services:
     volumes:
       - backend-data:/app/packages/backend/data
       - music-data:/data/music
+      # Optional: mount YouTube cookies file for yt-dlp
+      # - ./cookies.txt:/app/cookies.txt
     ports:
       - "3001:3001"
     networks:

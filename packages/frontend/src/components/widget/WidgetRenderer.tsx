@@ -10,6 +10,43 @@ function formatUptime(seconds: number): string {
   return `${m}m`;
 }
 
+function SpacerChannel({ node, theme }: { node: WidgetChannelNodeType; theme: WidgetTheme }) {
+  const t = WIDGET_THEMES[theme];
+
+  if (node.spacerType === 'line' || node.spacerType === 'dashline' || node.spacerType === 'dotline') {
+    const borderStyle = node.spacerType === 'dotline' ? 'dotted' : node.spacerType === 'dashline' ? 'dashed' : 'solid';
+    return (
+      <div style={{
+        padding: '4px 4px',
+        display: 'flex',
+        alignItems: 'center',
+      }}>
+        <div style={{
+          flex: 1,
+          borderBottom: `1px ${borderStyle} ${t.border}`,
+        }} />
+      </div>
+    );
+  }
+
+  const textAlign = node.spacerType === 'center' ? 'center' as const
+    : node.spacerType === 'right' ? 'right' as const
+    : 'left' as const;
+
+  return (
+    <div style={{
+      padding: '2px 4px',
+      fontSize: '11px',
+      color: t.textSecondary,
+      textAlign,
+      fontWeight: 600,
+      letterSpacing: '0.5px',
+    }}>
+      {node.spacerText || ''}
+    </div>
+  );
+}
+
 function ChannelNode({ node, depth, showClients, theme }: {
   node: WidgetChannelNodeType;
   depth: number;
@@ -18,6 +55,10 @@ function ChannelNode({ node, depth, showClients, theme }: {
 }) {
   const t = WIDGET_THEMES[theme];
   const indent = depth * 16;
+
+  if (node.isspacer) {
+    return <SpacerChannel node={node} theme={theme} />;
+  }
 
   return (
     <div>
@@ -78,6 +119,10 @@ function ChannelNode({ node, depth, showClients, theme }: {
 export function WidgetRenderer({ data }: { data: WidgetData }) {
   const t = WIDGET_THEMES[data.theme] || WIDGET_THEMES.dark;
 
+  const joinUrl = data.serverHost
+    ? `ts3server://${data.serverHost}${data.serverPort !== 9987 ? `?port=${data.serverPort}` : ''}`
+    : null;
+
   return (
     <div style={{
       background: t.background,
@@ -95,18 +140,38 @@ export function WidgetRenderer({ data }: { data: WidgetData }) {
         marginBottom: '10px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{
-            fontWeight: 700,
-            color: t.accent,
-            fontSize: '15px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            flex: 1,
-            marginRight: '8px',
-          }}>
-            {data.serverName}
-          </span>
+          {joinUrl ? (
+            <a
+              href={joinUrl}
+              style={{
+                fontWeight: 700,
+                color: t.accent,
+                fontSize: '15px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: 1,
+                marginRight: '8px',
+                textDecoration: 'none',
+              }}
+              title="Click to join server"
+            >
+              {data.serverName}
+            </a>
+          ) : (
+            <span style={{
+              fontWeight: 700,
+              color: t.accent,
+              fontSize: '15px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1,
+              marginRight: '8px',
+            }}>
+              {data.serverName}
+            </span>
+          )}
           <span style={{
             background: t.clientColor,
             color: '#fff',

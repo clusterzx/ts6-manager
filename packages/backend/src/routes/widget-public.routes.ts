@@ -23,7 +23,10 @@ async function getWidgetData(token: string, req: Request): Promise<WidgetData | 
   if (cached && cached.expiresAt > Date.now()) return cached.data;
 
   const prisma = req.app.locals.prisma;
-  const widget = await prisma.widget.findUnique({ where: { token } });
+  const widget = await prisma.widget.findUnique({
+    where: { token },
+    include: { serverConfig: { select: { host: true } } },
+  });
   if (!widget) return null;
 
   const pool: ConnectionPool = req.app.locals.connectionPool;
@@ -49,6 +52,8 @@ async function getWidgetData(token: string, req: Request): Promise<WidgetData | 
 
   const data: WidgetData = {
     serverName: info.virtualserver_name || 'TeamSpeak Server',
+    serverHost: widget.serverConfig.host,
+    serverPort: Number(info.virtualserver_port) || 9987,
     onlineUsers: onlineClients.length,
     maxClients: Number(info.virtualserver_maxclients) || 0,
     uptime: Number(info.virtualserver_uptime) || 0,
@@ -59,7 +64,7 @@ async function getWidgetData(token: string, req: Request): Promise<WidgetData | 
     showChannelTree: widget.showChannelTree,
     showClients: widget.showClients,
     channelTree: widget.showChannelTree
-      ? buildWidgetTree(channels, clients, widget.maxChannelDepth, widget.showClients)
+      ? buildWidgetTree(channels, clients, widget.maxChannelDepth, widget.showClients, widget.hideEmptyChannels ?? false)
       : [],
     fetchedAt: new Date().toISOString(),
   };

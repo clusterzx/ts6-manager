@@ -49,6 +49,7 @@ export function WidgetManagerModal({ open, onOpenChange }: Props) {
   const [theme, setTheme] = useState<WidgetTheme>('dark');
   const [showChannelTree, setShowChannelTree] = useState(true);
   const [showClients, setShowClients] = useState(true);
+  const [hideEmptyChannels, setHideEmptyChannels] = useState(false);
   const [maxChannelDepth, setMaxChannelDepth] = useState(5);
 
   const resetForm = () => {
@@ -58,6 +59,7 @@ export function WidgetManagerModal({ open, onOpenChange }: Props) {
     setTheme('dark');
     setShowChannelTree(true);
     setShowClients(true);
+    setHideEmptyChannels(false);
     setMaxChannelDepth(5);
   };
 
@@ -73,6 +75,7 @@ export function WidgetManagerModal({ open, onOpenChange }: Props) {
     setTheme(w.theme);
     setShowChannelTree(w.showChannelTree);
     setShowClients(w.showClients);
+    setHideEmptyChannels(w.hideEmptyChannels ?? false);
     setMaxChannelDepth(w.maxChannelDepth);
     setView('edit');
   };
@@ -91,6 +94,7 @@ export function WidgetManagerModal({ open, onOpenChange }: Props) {
       theme,
       showChannelTree,
       showClients,
+      hideEmptyChannels,
       maxChannelDepth,
     });
     setView('list');
@@ -100,7 +104,7 @@ export function WidgetManagerModal({ open, onOpenChange }: Props) {
     if (!editTarget || !name.trim()) return;
     await updateWidget.mutateAsync({
       id: editTarget.id,
-      data: { name: name.trim(), theme, showChannelTree, showClients, maxChannelDepth },
+      data: { name: name.trim(), theme, showChannelTree, showClients, hideEmptyChannels, maxChannelDepth },
     });
     setView('list');
   };
@@ -239,6 +243,11 @@ export function WidgetManagerModal({ open, onOpenChange }: Props) {
               <div className="flex items-center justify-between">
                 <Label>Show Clients</Label>
                 <Switch checked={showClients} onCheckedChange={setShowClients} />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label>Hide Empty Channels</Label>
+                <Switch checked={hideEmptyChannels} onCheckedChange={setHideEmptyChannels} />
               </div>
 
               <div className="space-y-2">

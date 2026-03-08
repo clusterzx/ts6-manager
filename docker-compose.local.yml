@@ -13,6 +13,7 @@ services:
       - DATABASE_URL=file:/app/packages/backend/data/ts6webui.db
       - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me-in-production}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - TS_ALLOW_SELF_SIGNED=${TS_ALLOW_SELF_SIGNED:-false}
       - JWT_ACCESS_EXPIRY=15m
       - JWT_REFRESH_EXPIRY=7d
       - FRONTEND_URL=http://localhost:3000

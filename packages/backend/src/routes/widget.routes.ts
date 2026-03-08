@@ -22,7 +22,7 @@ widgetRoutes.get('/', async (req: Request, res: Response, next) => {
 widgetRoutes.post('/', requireRole('admin'), async (req: Request, res: Response, next) => {
   try {
     const prisma = req.app.locals.prisma;
-    const { name, serverConfigId, virtualServerId, theme, showChannelTree, showClients, maxChannelDepth } = req.body;
+    const { name, serverConfigId, virtualServerId, theme, showChannelTree, showClients, hideEmptyChannels, maxChannelDepth } = req.body;
 
     if (!name || !serverConfigId) throw new AppError(400, 'name and serverConfigId are required');
 
@@ -38,6 +38,7 @@ widgetRoutes.post('/', requireRole('admin'), async (req: Request, res: Response,
         theme: theme ?? 'dark',
         showChannelTree: showChannelTree ?? true,
         showClients: showClients ?? true,
+        hideEmptyChannels: hideEmptyChannels ?? false,
         maxChannelDepth: maxChannelDepth ?? 5,
       },
       include: { serverConfig: { select: { id: true, name: true, host: true } } },
@@ -52,7 +53,7 @@ widgetRoutes.patch('/:id', requireRole('admin'), async (req: Request, res: Respo
   try {
     const prisma = req.app.locals.prisma;
     const id = parseInt(req.params.id as string);
-    const { name, theme, showChannelTree, showClients, maxChannelDepth } = req.body;
+    const { name, theme, showChannelTree, showClients, hideEmptyChannels, maxChannelDepth } = req.body;
 
     // Invalidate cache for this widget's token
     const existing = await prisma.widget.findUnique({ where: { id } });
@@ -66,6 +67,7 @@ widgetRoutes.patch('/:id', requireRole('admin'), async (req: Request, res: Respo
         ...(theme !== undefined && { theme }),
         ...(showChannelTree !== undefined && { showChannelTree }),
         ...(showClients !== undefined && { showClients }),
+        ...(hideEmptyChannels !== undefined && { hideEmptyChannels }),
         ...(maxChannelDepth !== undefined && { maxChannelDepth }),
       },
       include: { serverConfig: { select: { id: true, name: true, host: true } } },

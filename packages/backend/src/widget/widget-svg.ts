@@ -30,8 +30,8 @@ function formatUptime(seconds: number): string {
 function countTreeRows(nodes: WidgetChannelNode[], showClients: boolean): number {
   let count = 0;
   for (const node of nodes) {
-    count += 1; // channel row
-    if (showClients) count += node.clients.length;
+    count += 1; // channel or spacer row
+    if (!node.isspacer && showClients) count += node.clients.length;
     count += countTreeRows(node.children, showClients);
   }
   return count;
@@ -108,6 +108,22 @@ function renderTreeNodes(
   const indent = PADDING + depth * 16;
 
   for (const node of nodes) {
+    // Spacer channels
+    if (node.isspacer) {
+      const lineY = y + 11;
+      if (node.spacerType === 'line' || node.spacerType === 'dashline' || node.spacerType === 'dotline') {
+        const dashArray = node.spacerType === 'dotline' ? '2,4' : node.spacerType === 'dashline' ? '6,4' : 'none';
+        lines.push(`<line x1="${PADDING}" y1="${lineY}" x2="${WIDTH - PADDING}" y2="${lineY}" stroke="${theme.border}" stroke-width="1"${dashArray !== 'none' ? ` stroke-dasharray="${dashArray}"` : ''}/>`);
+      } else {
+        const text = escapeXml(node.spacerText || '');
+        const anchor = node.spacerType === 'center' ? 'middle' : node.spacerType === 'right' ? 'end' : 'start';
+        const tx = node.spacerType === 'center' ? WIDTH / 2 : node.spacerType === 'right' ? WIDTH - PADDING : PADDING;
+        lines.push(`<text x="${tx}" y="${y + 14}" fill="${theme.textSecondary}" font-family="${FONT}" font-size="11" font-weight="600" text-anchor="${anchor}" letter-spacing="0.5">${text}</text>`);
+      }
+      y += CHANNEL_ROW;
+      continue;
+    }
+
     // Channel row
     const channelName = escapeXml(truncate(node.name, 36 - depth * 2));
     const hashX = indent;

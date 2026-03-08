@@ -80,6 +80,11 @@
     font-family: 'Outfit', system-ui, sans-serif;
   }
 
+  /* Fix Radix ScrollArea display:table bug preventing scrolling */
+  [data-radix-scroll-area-viewport] > div {
+    display: block !important;
+  }
+
   /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 6px;

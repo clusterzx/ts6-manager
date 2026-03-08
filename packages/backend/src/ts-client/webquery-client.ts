@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import http from 'http';
 import https from 'https';
 import { TSApiError } from '../middleware/error-handler.js';
+import { config } from '../config.js';
 
 export class WebQueryClient {
   private http: AxiosInstance;
@@ -20,7 +21,7 @@ export class WebQueryClient {
     // TS server registers each one as a separate "serveradmin" query client
     // (serveradmin, serveradmin1, serveradmin2, ...).
     this.agent = useHttps
-      ? new https.Agent({ keepAlive: true, maxSockets: 1 })
+      ? new https.Agent({ keepAlive: true, maxSockets: 1, rejectUnauthorized: !config.tsAllowSelfSigned })
       : new http.Agent({ keepAlive: true, maxSockets: 1 });
 
     this.http = axios.create({
