@@ -251,9 +251,9 @@ export interface VariableNodeData {
 export interface GenerateCodeActionData {
   actionType: 'generateCode';
   label: string;
-  length?: number;        // default 5
-  storeAs?: string;       // default "code"
-  numericOnly?: boolean;  // default true
+  length?: number;
+  storeAs?: string;
+  numericOnly?: boolean;  
 }
 
 // --- Log ---

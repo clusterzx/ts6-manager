@@ -93,16 +93,11 @@ function normalizeFlowData(raw: any): FlowDefinition {
       if (config.cpid) params.cpid = config.cpid;
       const tmp = String(config.channel_flag_temporary ?? '');
       const semi = String(config.channel_flag_semi_permanent ?? '');
-      // UI semantics:
-      // - "Temporary" => temporary channel
-      // - "Permanent" => semi-permanent channel
       if (tmp === '1') {
         params.channel_flag_temporary = '1';
       } else {
-        // default + "Permanent" selection
         params.channel_flag_semi_permanent = '1';
       }
-      // If someone explicitly set semi-permanent, keep it (harmless redundancy)
       if (semi === '1') {
         params.channel_flag_semi_permanent = '1';
       }

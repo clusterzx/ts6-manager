@@ -823,13 +823,11 @@ export class FlowRunner {
     let value: string;
 
     if (numericOnly) {
-      // No leading zeros for "5-digit code" feel
       const min = Math.pow(10, Math.max(0, length - 1));
       const max = Math.pow(10, length);
       const n = crypto.randomInt(min, max);
       value = String(n);
     } else {
-      // simple alnum (optional)
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let out = '';
       for (let i = 0; i < length; i++) {
