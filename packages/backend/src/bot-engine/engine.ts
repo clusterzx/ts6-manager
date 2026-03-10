@@ -93,7 +93,6 @@ function normalizeFlowData(raw: any): FlowDefinition {
       if (config.cpid) params.cpid = config.cpid;
       const tmp = String(config.channel_flag_temporary ?? '');
       const semi = String(config.channel_flag_semi_permanent ?? '');
-
       // UI semantics:
       // - "Temporary" => temporary channel
       // - "Permanent" => semi-permanent channel
@@ -103,12 +102,12 @@ function normalizeFlowData(raw: any): FlowDefinition {
         // default + "Permanent" selection
         params.channel_flag_semi_permanent = '1';
       }
-
       // If someone explicitly set semi-permanent, keep it (harmless redundancy)
       if (semi === '1') {
         params.channel_flag_semi_permanent = '1';
       }
       if (config.channel_topic) params.channel_topic = config.channel_topic;
+      if (config.channel_password) params.channel_password = config.channel_password;
       data = { actionType: 'channelCreate', label, params: { ...params, ...config.params } };
     } else if (nodeType === 'action_channelEdit') {
       type = 'action';
@@ -117,6 +116,7 @@ function normalizeFlowData(raw: any): FlowDefinition {
       if (config.channel_topic) params.channel_topic = config.channel_topic;
       if (config.channel_description) params.channel_description = config.channel_description;
       if (config.channel_maxclients) params.channel_maxclients = config.channel_maxclients;
+      if (config.channel_password) params.channel_password = config.channel_password;
       data = { actionType: 'channelEdit', label, channelId: config.channelId || config.cid || '', params: { ...params, ...config.params } };
     } else if (nodeType === 'action_channelDelete') {
       type = 'action';
@@ -190,6 +190,9 @@ function normalizeFlowData(raw: any): FlowDefinition {
     } else if (nodeType === 'variable') {
       type = 'variable';
       data = { nodeType: 'variable', label, operation: config.operation || 'set', variableName: config.name || '', value: config.value || '' };
+    } else if (nodeType === 'action_generateCode') { 
+      type = 'action'; 
+      data = { actionType: 'generateCode', label, length: parseInt(config.length, 10) || 5, storeAs: config.storeAs || 'code', numericOnly: config.numericOnly !== false, };
     } else if (nodeType === 'log') {
       type = 'log';
       data = { nodeType: 'log', label, level: config.level || 'info', message: config.message || '' };

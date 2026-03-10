@@ -84,6 +84,7 @@ const LOGIC_NODES: NodeTypeDef[] = [
   { type: 'delay', label: 'Delay', icon: Clock, color: 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30', handles: { inputs: ['in'], outputs: ['out'] } },
   { type: 'variable', label: 'Set Variable', icon: Variable, color: 'bg-teal-500/20 text-teal-400 border-teal-500/30', handles: { inputs: ['in'], outputs: ['out'] } },
   { type: 'log', label: 'Log', icon: FileText, color: 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30', handles: { inputs: ['in'], outputs: ['out'] } },
+  { type: 'action_generateCode', label: 'Generate Code', icon: Sparkles, color: 'bg-teal-500/20 text-teal-400 border-teal-500/30', handles: { inputs: ['in'], outputs: ['out'] } },
 ];
 
 const ALL_NODE_TYPES: NodeTypeDef[] = [...TRIGGER_NODES, ...ACTION_NODES, ...VOICE_ACTION_NODES, ...SMART_ACTION_NODES, ...LOGIC_NODES];
@@ -909,6 +910,23 @@ export default function BotEditor() {
                         <Input type="number" className="h-7 text-xs mt-1 font-mono-data" placeholder="0" value={selectedNodeData.config.cpid || ''} onChange={(e) => setNodes((prev) => prev.map((n) => n.id === selectedNode ? { ...n, config: { ...n.config, cpid: e.target.value } } : n))} />
                       </div>
                       <div>
+                        <Label className="text-[10px] text-muted-foreground">Channel Password (optional)</Label>
+                        <Input
+                          className="h-7 text-xs mt-1 font-mono-data"
+                          placeholder="secret or {{temp.channelPassword}}"
+                          value={selectedNodeData.config.channel_password || ''}
+                          onChange={(e) =>
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === selectedNode
+                                  ? { ...n, config: { ...n.config, channel_password: e.target.value } }
+                                  : n
+                              )
+                            )
+                          }
+                        />
+                      </div>
+                      <div>
                         <Label className="text-[10px] text-muted-foreground">Temporary</Label>
                         <Select value={selectedNodeData.config.channel_flag_temporary || '0'} onValueChange={(v) => setNodes((prev) => prev.map((n) => { if (n.id !== selectedNode) return n; const cfg: any = { ...n.config }; if (v === '1') { cfg.channel_flag_temporary = '1'; delete cfg.channel_flag_semi_permanent; } else { cfg.channel_flag_temporary = '0'; cfg.channel_flag_semi_permanent = '1'; } return { ...n, config: cfg }; }) ) }>
                           <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
@@ -934,6 +952,26 @@ export default function BotEditor() {
                       <div>
                         <Label className="text-[10px] text-muted-foreground">Channel Topic</Label>
                         <Input className="h-7 text-xs mt-1" placeholder="Optional" value={selectedNodeData.config.channel_topic || ''} onChange={(e) => setNodes((prev) => prev.map((n) => n.id === selectedNode ? { ...n, config: { ...n.config, channel_topic: e.target.value } } : n))} />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Channel Password (optional)</Label>
+                        <Input
+                          className="h-7 text-xs mt-1 font-mono-data"
+                          placeholder="secret or {{temp.channelPassword}}"
+                          value={selectedNodeData.config.channel_password || ''}
+                          onChange={(e) =>
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === selectedNode
+                                  ? { ...n, config: { ...n.config, channel_password: e.target.value } }
+                                  : n
+                              )
+                            )
+                          }
+                        />
+                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                          Leave empty to keep unchanged.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -1316,6 +1354,74 @@ export default function BotEditor() {
                     </div>
                   )}
 
+                  {selectedNodeData.type === 'action_generateCode' && (
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Length</Label>
+                        <Input
+                          type="number"
+                          className="h-7 text-xs mt-1 font-mono-data"
+                          placeholder="5"
+                          value={selectedNodeData.config.length ?? '5'}
+                          onChange={(e) =>
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === selectedNode
+                                  ? { ...n, config: { ...n.config, length: e.target.value } }
+                                  : n
+                              )
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Store As</Label>
+                        <Input
+                          className="h-7 text-xs mt-1 font-mono-data"
+                          placeholder="code"
+                          value={selectedNodeData.config.storeAs ?? 'code'}
+                          onChange={(e) =>
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === selectedNode
+                                  ? { ...n, config: { ...n.config, storeAs: e.target.value } }
+                                  : n
+                              )
+                            )
+                          }
+                        />
+                        <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                          Use as: {'{{temp.'}{(selectedNodeData.config.storeAs ?? 'code')}{'}}'}
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Characters</Label>
+                        <Select
+                          value={(selectedNodeData.config.numericOnly ?? true) ? 'digits' : 'alnum'}
+                          onValueChange={(v) =>
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === selectedNode
+                                  ? { ...n, config: { ...n.config, numericOnly: v === 'digits' } }
+                                  : n
+                              )
+                            )
+                          }
+                        >
+                          <SelectTrigger className="h-7 text-xs mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="digits">Digits only</SelectItem>
+                            <SelectItem value="alnum">Alphanumeric</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                  
                   {selectedNodeData.type === 'log' && (
                     <div className="space-y-2">
                       <div>

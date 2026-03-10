@@ -16,6 +16,7 @@ import type {
 import axios from 'axios';
 import { validateUrl } from '../utils/url-validator.js';
 import { ALLOWED_WEBQUERY_COMMANDS } from './command-whitelist.js';
+import crypto from 'crypto';
 
 const MAX_NODE_VISITS = 100;
 const MAX_DELAY_MS = 300000; // 5 minutes
@@ -35,7 +36,7 @@ export class FlowRunner {
     private prisma: PrismaClient,
     private connectionPool: ConnectionPool,
     private wss: WebSocketServer,
-  ) {}
+  ) { }
 
   setVoiceBotManager(manager: VoiceBotManager): void {
     this.voiceBotManager = manager;
@@ -252,6 +253,7 @@ export class FlowRunner {
         case 'voicePauseResume': await this.executeVoicePauseResume(data, ctx); break;
         case 'voiceSkip': await this.executeVoiceSkip(data, ctx); break;
         case 'voiceSeek': await this.executeVoiceSeek(data, ctx); break;
+        case 'generateCode': await this.executeGenerateCode(data, ctx); break;
         case 'voiceTts': await this.executeVoiceTts(data, ctx); break;
         case 'animatedChannel':
           // Animation lifecycle managed by BotEngine (not per-execution)
@@ -812,4 +814,32 @@ export class FlowRunner {
       }
     });
   }
+
+  private async executeGenerateCode(data: any, ctx: ExecutionContext): Promise<void> {
+    const length = Math.max(1, Math.min(12, Number(data.length) || 5));
+    const storeAs = String(data.storeAs || 'code');
+    const numericOnly = data.numericOnly !== false;
+
+    let value: string;
+
+    if (numericOnly) {
+      // No leading zeros for "5-digit code" feel
+      const min = Math.pow(10, Math.max(0, length - 1));
+      const max = Math.pow(10, length);
+      const n = crypto.randomInt(min, max);
+      value = String(n);
+    } else {
+      // simple alnum (optional)
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let out = '';
+      for (let i = 0; i < length; i++) {
+        out += chars[crypto.randomInt(0, chars.length)];
+      }
+      value = out;
+    }
+
+    ctx.setTemp(storeAs, value);
+    await this.log(ctx, null, 'info', `Generated code stored as temp.${storeAs}`);
+  }
+
 }
