@@ -14,8 +14,10 @@ export interface SidecarStats {
 export class SidecarClient {
   private baseUrl: string;
 
-  constructor(port: number = 9800) {
-    this.baseUrl = `http://127.0.0.1:${port}`;
+  constructor(portOrUrl: number | string = 9800) {
+    this.baseUrl = typeof portOrUrl === 'string'
+      ? portOrUrl.replace(/\/+$/, '')
+      : `http://127.0.0.1:${portOrUrl}`;
   }
 
   async waitHealthy(timeoutMs: number = 6000): Promise<void> {

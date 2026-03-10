@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/api/bots.api';
 import { authApi } from '@/api/auth.api';
 import { serversApi } from '@/api/servers.api';
+import { settingsApi } from '@/api/settings.api';
 import { useAuthStore } from '@/stores/auth.store';
 import { PageLoader } from '@/components/shared/LoadingSpinner';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { Settings as SettingsIcon, Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound, Youtube, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Settings() {
@@ -31,6 +32,7 @@ export default function Settings() {
           {isAdmin && <TabsTrigger value="connections"><Server className="h-3.5 w-3.5 mr-1" /> Connections</TabsTrigger>}
           <TabsTrigger value="account"><Lock className="h-3.5 w-3.5 mr-1" /> Account</TabsTrigger>
           {isAdmin && <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> Users</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="youtube"><Youtube className="h-3.5 w-3.5 mr-1" /> YouTube</TabsTrigger>}
         </TabsList>
 
         {isAdmin && (
@@ -46,6 +48,12 @@ export default function Settings() {
         {isAdmin && (
           <TabsContent value="users" className="mt-4">
             <UsersTab />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="youtube" className="mt-4">
+            <YouTubeTab />
           </TabsContent>
         )}
       </Tabs>
@@ -431,6 +439,148 @@ function UsersTab() {
         onConfirm={() => { if (deleteId) deleteUser.mutate(deleteId, { onSuccess: () => { toast.success('User deleted'); setDeleteId(null); } }); }}
         destructive
       />
+    </div>
+  );
+}
+
+function YouTubeTab() {
+  const qc = useQueryClient();
+  const [pasteMode, setPasteMode] = useState(false);
+  const [cookieText, setCookieText] = useState('');
+
+  const { data: status, isLoading } = useQuery({
+    queryKey: ['yt-cookie-status'],
+    queryFn: settingsApi.getYtCookieStatus,
+  });
+
+  const uploadFile = useMutation({
+    mutationFn: (file: File) => settingsApi.uploadYtCookieFile(file),
+    onSuccess: () => {
+      toast.success('Cookie file uploaded');
+      qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
+    },
+    onError: () => toast.error('Failed to upload cookie file'),
+  });
+
+  const uploadText = useMutation({
+    mutationFn: (text: string) => settingsApi.uploadYtCookieText(text),
+    onSuccess: () => {
+      toast.success('Cookies saved');
+      setCookieText('');
+      setPasteMode(false);
+      qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
+    },
+    onError: () => toast.error('Failed to save cookies'),
+  });
+
+  const deleteCookies = useMutation({
+    mutationFn: () => settingsApi.deleteYtCookies(),
+    onSuccess: () => {
+      toast.success('Cookie file removed');
+      qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
+    },
+    onError: () => toast.error('Failed to remove cookies'),
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadFile.mutate(file);
+    e.target.value = '';
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  };
+
+  return (
+    <div className="max-w-lg space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">YouTube Cookies</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Upload a cookies.txt file to access age-restricted or member-only YouTube content.
+            You can export cookies from your browser using extensions like
+            {' '}<span className="font-medium">Get cookies.txt LOCALLY</span> (Chrome/Firefox).
+          </p>
+
+          {/* Status */}
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${status?.active ? 'bg-green-500' : 'bg-zinc-500'}`} />
+            <span className="text-sm">
+              {isLoading ? 'Loading...' : status?.active
+                ? `Cookies active (${formatSize(status.size)})`
+                : 'No cookies configured'}
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="file"
+              accept=".txt,.cookies"
+              className="hidden"
+              id="cookie-file-input"
+              onChange={handleFileSelect}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => document.getElementById('cookie-file-input')?.click()}
+              disabled={uploadFile.isPending}
+            >
+              <Upload className="h-3.5 w-3.5 mr-1" />
+              {uploadFile.isPending ? 'Uploading...' : 'Upload cookies.txt'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPasteMode(!pasteMode)}
+            >
+              <FileText className="h-3.5 w-3.5 mr-1" />
+              Paste cookies
+            </Button>
+            {status?.active && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => deleteCookies.mutate()}
+                disabled={deleteCookies.isPending}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                Remove
+              </Button>
+            )}
+          </div>
+
+          {/* Paste mode */}
+          {pasteMode && (
+            <div className="space-y-2">
+              <textarea
+                className="w-full h-32 rounded-md border border-border bg-background px-3 py-2 text-xs font-mono resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                placeholder="# Netscape HTTP Cookie File&#10;.youtube.com&#9;TRUE&#9;/&#9;TRUE&#9;0&#9;COOKIE_NAME&#9;COOKIE_VALUE"
+                value={cookieText}
+                onChange={(e) => setCookieText(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => uploadText.mutate(cookieText)}
+                  disabled={!cookieText.trim() || uploadText.isPending}
+                >
+                  {uploadText.isPending ? 'Saving...' : 'Save'}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setPasteMode(false); setCookieText(''); }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

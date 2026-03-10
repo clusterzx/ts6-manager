@@ -31,6 +31,7 @@ import { musicRequestRoutes } from './routes/music-requests.routes.js';
 import { widgetPublicRoutes } from './routes/widget-public.routes.js';
 import { widgetRoutes } from './routes/widget.routes.js';
 import { setupRoutes } from './routes/setup.routes.js';
+import { settingsRoutes } from './routes/settings.routes.js';
 import { requireServerAccess } from './middleware/server-access.js';
 
 export function createApp(): Express {
@@ -101,6 +102,7 @@ export function createApp(): Express {
   app.use('/api/servers/:configId/radio-stations', serverAccess, radioStationRoutes);
   app.use('/api/servers/:configId/music-requests', serverAccess, musicRequestRoutes);
   app.use('/api/widgets', widgetRoutes);
+  app.use('/api/settings', settingsRoutes);
 
   // Error handler (must be last)
   app.use(errorHandler);

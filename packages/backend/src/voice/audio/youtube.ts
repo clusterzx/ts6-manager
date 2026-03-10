@@ -26,8 +26,16 @@ export function setYtCookieFile(filePath: string | null): void {
   ytCookieFile = filePath;
 }
 
-function getCookieArgs(): string[] {
-  return ytCookieFile ? ["--cookies", ytCookieFile] : [];
+export function getYtCookieFile(): string | null {
+  return ytCookieFile;
+}
+
+export function getCookieArgs(): string[] {
+  const args: string[] = ["--remote-components", "ejs:github"];
+  if (ytCookieFile) {
+    args.push("--cookies", ytCookieFile);
+  }
+  return args;
 }
 
 /**

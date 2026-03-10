@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   backend:
-    image: clusterzx/ts6-manager:backend
-    container_name: ts6-backend
+    image: clusterzx/ts6-manager:backend-dev
+    container_name: ts6-backend-dev
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -11,43 +11,36 @@ services:
       - DATABASE_URL=file:/app/packages/backend/data/ts6webui.db
       - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env or environment}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
-      - TS_ALLOW_SELF_SIGNED=${TS_ALLOW_SELF_SIGNED:-false}
-      - YT_COOKIE_FILE=${YT_COOKIE_FILE:-}
       - JWT_ACCESS_EXPIRY=15m
       - JWT_REFRESH_EXPIRY=7d
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3090}
       - MUSIC_DIR=/data/music
-      - SIDECAR_URL=http://ts6-sidecar:9800
-      - SIDECAR_BINARY_PATH=${SIDECAR_BINARY_PATH:-}
+      - SIDECAR_URL=http://ts6-sidecar-dev:9800
     volumes:
       - backend-data:/app/packages/backend/data
       - music-data:/data/music
-      # Optional: mount YouTube cookies file for yt-dlp
-      # - ./cookies.txt:/app/cookies.txt
     ports:
-      - "3001:3001"
+      - "3091:3001"
     depends_on:
       - sidecar
     networks:
       - ts6-network
 
   sidecar:
-    image: clusterzx/ts6-manager:sidecar
-    container_name: ts6-sidecar
+    image: clusterzx/ts6-manager:sidecar-dev
+    container_name: ts6-sidecar-dev
     restart: unless-stopped
     environment:
       - SIDECAR_PORT=9800
-    ports:
-      - "9800:9800"
     networks:
       - ts6-network
 
   frontend:
-    image: clusterzx/ts6-manager:frontend
-    container_name: ts6-frontend
+    image: clusterzx/ts6-manager:frontend-dev
+    container_name: ts6-frontend-dev
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "3090:80"
     depends_on:
       - backend
     networks:

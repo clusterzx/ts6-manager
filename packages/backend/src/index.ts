@@ -10,6 +10,7 @@ import { config } from './config.js';
 import { setYtCookieFile } from './voice/audio/youtube.js';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
+import path from 'path';
 
 async function main() {
   // C1: JWT secret startup guard
@@ -21,15 +22,17 @@ async function main() {
     console.warn('[WARN] JWT_SECRET is using the default development value. Set JWT_SECRET in production!');
   }
 
-  // Configure yt-dlp cookie file if provided
+  // Configure yt-dlp cookie file: env var takes priority, then saved file from data dir
   const cookiePath = process.env.YT_COOKIE_FILE;
-  if (cookiePath) {
-    if (fs.existsSync(cookiePath)) {
-      setYtCookieFile(cookiePath);
-      console.log(`[yt-dlp] Using cookie file: ${cookiePath}`);
-    } else {
-      console.warn(`[yt-dlp] Cookie file not found: ${cookiePath}`);
-    }
+  const savedCookiePath = path.resolve('data', 'yt-cookies.txt');
+  if (cookiePath && fs.existsSync(cookiePath)) {
+    setYtCookieFile(cookiePath);
+    console.log(`[yt-dlp] Using cookie file (env): ${cookiePath}`);
+  } else if (fs.existsSync(savedCookiePath)) {
+    setYtCookieFile(savedCookiePath);
+    console.log(`[yt-dlp] Using saved cookie file: ${savedCookiePath}`);
+  } else if (cookiePath) {
+    console.warn(`[yt-dlp] Cookie file not found: ${cookiePath}`);
   }
 
   const prisma = new PrismaClient();

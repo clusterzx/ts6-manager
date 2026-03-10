@@ -7,6 +7,7 @@ import { StreamSignaling, type ActiveStream, type SignalingMessage } from './str
 import { SidecarClient } from './streaming/sidecar-client.js';
 import { SidecarProcess, type SidecarConfig } from './streaming/sidecar-process.js';
 import { STREAM_PRESETS, DEFAULT_PRESET, type VideoViewerInfo, type VideoStreamStatus } from './streaming/types.js';
+import { getCookieArgs } from './audio/youtube.js';
 import { spawn } from 'child_process';
 
 /** Resolve a YouTube/yt-dlp-compatible URL to a direct stream URL */
@@ -20,6 +21,7 @@ function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<string> 
     // Request best combined format (video+audio) up to the target height
     const formatFilter = `best[height<=${maxHeight}][ext=mp4]/best[height<=${maxHeight}]/best[ext=mp4]/best`;
     const proc = spawn('yt-dlp', [
+      ...getCookieArgs(),
       '-f', formatFilter,
       '--no-playlist',
       '-g',  // print direct URL only
@@ -769,8 +771,7 @@ export class VoiceBot extends EventEmitter {
 
     if (sidecarUrl) {
       // Docker mode: sidecar is an external service, don't spawn it
-      const url = new URL(sidecarUrl);
-      this.sidecarHttp = new SidecarClient(parseInt(url.port) || 9800);
+      this.sidecarHttp = new SidecarClient(sidecarUrl);
     } else {
       // Local mode: spawn sidecar binary
       const sidecarConfig: SidecarConfig = {
