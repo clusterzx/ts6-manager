@@ -97,14 +97,14 @@ export function VideoPlayer({ botId, streaming }: VideoPlayerProps) {
 
   if (!streaming) {
     return (
-      <div className="flex items-center justify-center bg-black/50 rounded-lg aspect-video">
+      <div className="flex items-center justify-center bg-black/50 rounded-lg aspect-video max-w-xl">
         <p className="text-muted-foreground text-sm">No active video stream</p>
       </div>
     );
   }
 
   return (
-    <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+    <div className="relative rounded-lg overflow-hidden bg-black aspect-video max-w-xl">
       <video
         ref={videoRef}
         autoPlay
