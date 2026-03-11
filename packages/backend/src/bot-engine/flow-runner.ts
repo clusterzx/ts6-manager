@@ -449,6 +449,7 @@ export class FlowRunner {
       headers,
       data: body ? JSON.parse(body) : undefined,
       timeout: 15000,
+      transformResponse: [(data) => data], // Return raw response, don't auto-parse JSON
     });
     if (data.storeAs) {
       ctx.setTemp(data.storeAs, response.data);
