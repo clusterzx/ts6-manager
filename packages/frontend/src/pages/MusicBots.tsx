@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { musicRequestsApi } from '@/api/music-requests.api';
+import { musicBotsApi } from '@/api/music.api';
 import {
   useMusicBots, useCreateMusicBot, useUpdateMusicBot, useDeleteMusicBot,
   useStartMusicBot, useStopMusicBot, useMusicBotState,
@@ -84,6 +85,10 @@ function BotPlayerCard({ bot, onEdit, onDelete, onPlay }: {
   const shuffleMut = useSetShuffle();
   const repeatMut = useSetRepeat();
 
+  // Widget token dialog
+  const [showWidget, setShowWidget] = useState(false);
+  const [widgetData, setWidgetData] = useState<{ token: string; jsonUrl: string; bbcodeUrl: string } | null>(null);
+
   // Local drag state so sliders don't snap back during interaction
   const [draggingSeek, setDraggingSeek] = useState<number | null>(null);
   const [draggingVolume, setDraggingVolume] = useState<number | null>(null);
@@ -102,6 +107,14 @@ function BotPlayerCard({ bot, onEdit, onDelete, onPlay }: {
             <CardTitle className="text-sm font-medium truncate">{bot.name}</CardTitle>
           </div>
           <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Player Widget"
+              onClick={() => {
+                musicBotsApi.playerWidgetToken(bot.id).then(setWidgetData);
+                setShowWidget(true);
+              }}
+            >
+              <Link className="h-3.5 w-3.5" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -280,6 +293,44 @@ function BotPlayerCard({ bot, onEdit, onDelete, onPlay }: {
           )}
         </div>
       </CardContent>
+
+      {/* Player Widget Dialog */}
+      <Dialog open={showWidget} onOpenChange={setShowWidget}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Player Widget</DialogTitle>
+            <DialogDescription className="text-xs">
+              Embed these URLs in your TeamSpeak channel description or website.
+            </DialogDescription>
+          </DialogHeader>
+          {widgetData && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">BBCode URL (for channel description)</Label>
+                <div className="flex gap-1.5 mt-1">
+                  <Input readOnly className="h-7 text-[11px] font-mono-data" value={widgetData.bbcodeUrl} />
+                  <Button variant="outline" size="sm" className="h-7 text-xs shrink-0"
+                    onClick={() => { navigator.clipboard.writeText(widgetData.bbcodeUrl); toast.success('Copied!'); }}
+                  >Copy</Button>
+                </div>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">JSON URL (for websites/integrations)</Label>
+                <div className="flex gap-1.5 mt-1">
+                  <Input readOnly className="h-7 text-[11px] font-mono-data" value={widgetData.jsonUrl} />
+                  <Button variant="outline" size="sm" className="h-7 text-xs shrink-0"
+                    onClick={() => { navigator.clipboard.writeText(widgetData.jsonUrl); toast.success('Copied!'); }}
+                  >Copy</Button>
+                </div>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Token</Label>
+                <Input readOnly className="h-7 text-[11px] font-mono-data mt-1" value={widgetData.token} />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
