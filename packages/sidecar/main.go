@@ -163,6 +163,36 @@ func (s *Sidecar) resetSyncTiming() {
 	s.audioTiming = TrackTiming{}
 }
 
+func (s *Sidecar) drainRTPQueues() {
+	for {
+		select {
+		case <-s.videoQueue:
+		default:
+			goto drainAudio
+		}
+	}
+
+drainAudio:
+	for {
+		select {
+		case <-s.audioQueue:
+		default:
+			return
+		}
+	}
+}
+
+func (s *Sidecar) resetPeerStreamState() {
+	s.peersLock.RLock()
+	defer s.peersLock.RUnlock()
+
+	for _, peer := range s.peers {
+		peer.mu.Lock()
+		peer.Started = false
+		peer.mu.Unlock()
+	}
+}
+
 func (s *Sidecar) computeTrackDelay(kind string, ts uint32, now time.Time) time.Duration {
 	s.timingMu.Lock()
 	defer s.timingMu.Unlock()
@@ -818,12 +848,13 @@ func (s *Sidecar) ClosePeer(id string) {
 }
 
 func (s *Sidecar) StartFFmpeg(source string, width int, height int, framerate int, bitrate string) {
-	s.resetSyncTiming()
 	s.ffmpegLock.Lock()
-
 	defer s.ffmpegLock.Unlock()
 
 	s.StopFFmpegLocked()
+	s.resetSyncTiming()
+	s.drainRTPQueues()
+	s.resetPeerStreamState()
 
 	s.source = source
 
@@ -1092,7 +1123,11 @@ func main() {
 	mux.HandleFunc("POST /source/stop", func(w http.ResponseWriter, r *http.Request) {
 		sidecar.ffmpegLock.Lock()
 		sidecar.StopFFmpegLocked()
+		sidecar.resetSyncTiming()
+		sidecar.drainRTPQueues()
+		sidecar.resetPeerStreamState()
 		sidecar.ffmpegLock.Unlock()
+
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
