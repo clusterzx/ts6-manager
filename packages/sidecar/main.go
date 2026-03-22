@@ -316,12 +316,14 @@ func (s *Sidecar) StartRTP() error {
 	if err != nil {
 		return fmt.Errorf("bind video UDP: %w", err)
 	}
+	_ = s.videoConn.SetReadBuffer(envIntOrDefault("VIDEO_RTP_READ_BUFFER", 4*1024*1024))
 	s.videoPort = s.videoConn.LocalAddr().(*net.UDPAddr).Port
 
 	s.audioConn, err = net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
 	if err != nil {
 		return fmt.Errorf("bind audio UDP: %w", err)
 	}
+	_ = s.audioConn.SetReadBuffer(envIntOrDefault("AUDIO_RTP_READ_BUFFER", 1*1024*1024))
 	s.audioPort = s.audioConn.LocalAddr().(*net.UDPAddr).Port
 
 	log.Printf("[RTP] Video port: %d, Audio port: %d", s.videoPort, s.audioPort)
@@ -815,13 +817,31 @@ func (s *Sidecar) ClosePeer(id string) {
 	s.peersLock.Unlock()
 }
 
-func (s *Sidecar) StartFFmpeg(source string) {
+func (s *Sidecar) StartFFmpeg(source string, width int, height int, framerate int, bitrate string) {
 	s.resetSyncTiming()
 	s.ffmpegLock.Lock()
+
 	defer s.ffmpegLock.Unlock()
 
 	s.StopFFmpegLocked()
+
 	s.source = source
+
+	w := width
+	h := height
+	fps := framerate
+
+	if w <= 0 {
+		w = envIntOrDefault("VIDEO_WIDTH", 1280)
+	}
+
+	if h <= 0 {
+		h = envIntOrDefault("VIDEO_HEIGHT", 720)
+	}
+
+	if fps <= 0 {
+		fps = envIntOrDefault("VIDEO_FRAMERATE", 30)
+	}
 
 	args := []string{}
 
@@ -831,22 +851,22 @@ func (s *Sidecar) StartFFmpeg(source string) {
 		} else {
 			args = append(args, "-stream_loop", "-1")
 		}
+
 		args = append(args, "-fflags", "+genpts+discardcorrupt", "-re", "-i", source)
 	} else {
-		w := envIntOrDefault("VIDEO_WIDTH", 1280)
-		h := envIntOrDefault("VIDEO_HEIGHT", 720)
 		args = append(args, "-re", "-f", "lavfi", "-i", fmt.Sprintf("color=c=black:s=%dx%d:r=1", w, h))
 	}
 
-	w := envIntOrDefault("VIDEO_WIDTH", 1280)
-	h := envIntOrDefault("VIDEO_HEIGHT", 720)
-	vBitrate := envOrDefault("VIDEO_BITRATE", "1500k")
+	vBitrate := strings.TrimSpace(bitrate)
+		if vBitrate == "" {
+			vBitrate = envOrDefault("VIDEO_BITRATE", "1500k")
+		}
 	audioDelayMs := envIntOrDefault("AUDIO_DELAY_MS", 0)
 
 	if source != "" {
 		vf := fmt.Sprintf(
-			"fps=30,scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
-			w, h, w, h,
+			"fps=%d,scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+			fps, w, h, w, h,
 		)
 		args = append(args,
 			"-map", "0:v:0",
@@ -856,15 +876,15 @@ func (s *Sidecar) StartFFmpeg(source string) {
 	args = append(args,
 		"-pix_fmt", "yuv420p",
 		"-c:v", "libvpx",
-		"-cpu-used", "8",
+		"-cpu-used", "6",
 		"-deadline", "realtime",
 		"-lag-in-frames", "0",
 		"-error-resilient", "1",
 		"-b:v", vBitrate,
-		"-maxrate", "2M",
-		"-bufsize", "100k",
-		"-keyint_min", "15",
-		"-g", "15",
+		"-maxrate", vBitrate,
+		"-bufsize", envOrDefault("VIDEO_BUFSIZE", "500k"),
+		"-keyint_min", "12",
+		"-g", "12",
 		"-auto-alt-ref", "0",
 		"-payload_type", "96",
 		"-ssrc", "11111111",
@@ -1054,14 +1074,18 @@ func main() {
 
 	mux.HandleFunc("POST /source", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Source string `json:"source"`
+			Source    string `json:"source"`
+			Width     int    `json:"width"`
+			Height    int    `json:"height"`
+			Framerate int    `json:"framerate"`
+			Bitrate   string `json:"bitrate"` 
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), 400)
 			return
 		}
-		log.Printf("[API] Setting source: %s", req.Source)
-		sidecar.StartFFmpeg(req.Source)
+		log.Printf("[API] Setting source: %s (%dx%d @ %dfps)", req.Source, req.Width, req.Height, req.Framerate, req.Bitrate)
+		sidecar.StartFFmpeg(req.Source, req.Width, req.Height, req.Framerate, req.Bitrate)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 

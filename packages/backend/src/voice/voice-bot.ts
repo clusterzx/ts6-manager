@@ -127,6 +127,8 @@ export class VoiceBot extends EventEmitter {
   private _activeStreamId: string | null = null;
   private _videoSource: string | null = null;
   private _videoPreset: string = DEFAULT_PRESET;
+  private _videoFramerate: number = STREAM_PRESETS[DEFAULT_PRESET]?.framerate ?? 30;
+  private _videoBitrate: string = STREAM_PRESETS[DEFAULT_PRESET]?.bitrate ?? '2500k';
   private _videoStartedAt: number | null = null;
   private _viewers: Map<number, VideoViewerInfo> = new Map();
 
@@ -750,6 +752,8 @@ export class VoiceBot extends EventEmitter {
       streamId: this._activeStreamId,
       source: this._videoSource,
       preset: this._videoPreset,
+      framerate: this._videoFramerate,
+      bitrate: this._videoBitrate,
       startedAt: this._videoStartedAt,
       viewerCount: this._viewers.size,
       viewers: Array.from(this._viewers.values()),
@@ -758,7 +762,7 @@ export class VoiceBot extends EventEmitter {
   }
 
   /** Start video streaming to TS6 via WebRTC */
-  async startVideoStream(source: string, preset?: string): Promise<void> {
+  async startVideoStream(source: string, preset?: string, framerate?: number, bitrate?: string): Promise<void> {
     if (this._status !== 'connected' && this._status !== 'playing' && this._status !== 'paused') {
       throw new Error('Bot is not connected');
     }
@@ -768,8 +772,17 @@ export class VoiceBot extends EventEmitter {
 
     const sidecarBinary = this.config.sidecarBinaryPath || process.env.SIDECAR_BINARY_PATH || 'sidecar';
     const sidecarPort = this.config.sidecarPort || 9800;
-    this._videoPreset = preset || this.config.streamPreset || DEFAULT_PRESET;
+    this._videoPreset = preset ?? this.config.streamPreset ?? DEFAULT_PRESET;
     const presetConfig = STREAM_PRESETS[this._videoPreset] || STREAM_PRESETS[DEFAULT_PRESET];
+    const effectiveFramerate = framerate && framerate > 0
+      ? framerate
+      : presetConfig.framerate;
+    const effectiveBitrate = bitrate?.trim()
+      ? bitrate.trim()
+      : presetConfig.bitrate;
+
+    this._videoFramerate = effectiveFramerate;
+    this._videoBitrate = effectiveBitrate;
 
     // Check if sidecar URL is set (Docker mode — sidecar runs as separate container)
     const sidecarUrl = process.env.SIDECAR_URL;
@@ -782,9 +795,9 @@ export class VoiceBot extends EventEmitter {
       const sidecarConfig: SidecarConfig = {
         binaryPath: sidecarBinary,
         port: sidecarPort,
-        videoBitrate: presetConfig.bitrate,
+        videoBitrate: effectiveBitrate,
         videoResolution: { width: presetConfig.width, height: presetConfig.height },
-        videoFramerate: presetConfig.framerate,
+        videoFramerate: effectiveFramerate,
       };
 
       this.sidecarProc = new SidecarProcess(sidecarConfig);
@@ -848,7 +861,13 @@ export class VoiceBot extends EventEmitter {
 
     // Resolve YouTube/streaming URLs via yt-dlp, then start ffmpeg
     const resolvedSource = await resolveVideoUrl(source, presetConfig.height);
-    await this.sidecarHttp.setSource(resolvedSource);
+    await this.sidecarHttp.setSource(
+      resolvedSource,
+      presetConfig.width,
+      presetConfig.height,
+      effectiveFramerate,
+      effectiveBitrate,
+    );
 
     console.log(`[VoiceBot ${this.config.id}] Video stream started: ${stream.id}, source: ${source}`);
     this.emit('videoStreamStarted', { streamId: stream.id, source, preset: this._videoPreset });
@@ -907,7 +926,14 @@ export class VoiceBot extends EventEmitter {
     this._videoSource = source;
     const currentPreset = STREAM_PRESETS[this._videoPreset] || STREAM_PRESETS[DEFAULT_PRESET];
     const resolvedSource = await resolveVideoUrl(source, currentPreset.height);
-    await this.sidecarHttp.setSource(resolvedSource);
+
+    await this.sidecarHttp.setSource(
+      resolvedSource,
+      currentPreset.width,
+      currentPreset.height,
+      this._videoFramerate,
+      this._videoBitrate,
+    );
     console.log(`[VoiceBot ${this.config.id}] Video source changed: ${source}`);
     this.emit('videoSourceChanged', source);
   }
@@ -960,7 +986,7 @@ export class VoiceBot extends EventEmitter {
       const clid = parseInt(params.clid) || 0;
       if (this._viewers.has(clid)) {
         console.log(`[VoiceBot ${this.config.id}] Viewer left: clid=${clid}`);
-        this.sidecarHttp?.closePeer(String(clid)).catch(() => {});
+        this.sidecarHttp?.closePeer(String(clid)).catch(() => { });
         this._viewers.delete(clid);
         this.emit('videoViewerLeft', clid);
       }

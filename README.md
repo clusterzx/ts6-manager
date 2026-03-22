@@ -241,6 +241,20 @@ The Docker images handle migrations automatically on startup.
 | `SIDECAR_URL` | — | Optional. Full URL of the WebRTC sidecar service (e.g. `http://ts6-sidecar:9800`). Set in Docker when sidecar runs as a separate container. |
 | `YT_COOKIE_FILE` | — | Optional. Path to a Netscape-format cookies.txt file for yt-dlp. Can also be managed via **Settings → YouTube** in the UI. |
 
+## Environment Variables Sidecar(VideoStreaming)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VIDEO_QUEUE_SIZE` | `2048` | Size of the video RTP queue |
+| `AUDIO_QUEUE_SIZE` | `4096` | Size of the audio RTP queue |
+| `SYNC_PLAYOUT_BUFFER_MS` | `4` | Small playout buffer used by the adaptive pacing logic |
+| `SYNC_VIDEO_BIAS_MS` | `4` | Optional extra holdback for video to fine-tune sync |
+| `AUDIO_DELAY_MS` | `0` | Legacy / manual audio delay option With the current pacing logic this is typically expected to stay at 0 |
+| `SIDECAR_DEBUG_LOGS` | `1` | Enables verbose debug logging for high-frequency runtime details |
+| `VIDEO_READ_RTP_BUFFER` | `4194304` | UDP OS-socketbuffer for video port |
+| `AUDIO_READ_RTP_BUFFER` | `1048576` | UDP OS-socketbuffer for audio port |
+| `VIDEO_BUFSIZE` | `1M` | FFmpeg Video Buffer |
+
 ## Music Bot Text Commands
 
 When a music bot is connected to a channel, users in that channel can control it via chat:
