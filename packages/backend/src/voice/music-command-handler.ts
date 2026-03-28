@@ -57,9 +57,13 @@ export class MusicCommandHandler {
     const command = parts[0].toLowerCase();
     if (!MUSIC_COMMANDS.has(command)) return;
 
-    const args = parts.slice(1).join(' ').trim();
+    const rawArgs = parts.slice(1).join(' ').trim();
     const userClid = parseInt(data.invokerid || '0');
     if (!userClid) return;
+
+    // Clean BBCode URL tags if present (TS3 auto-wraps links)
+    // [URL]https://...[/URL] -> https://...
+    const args = rawArgs.replace(/\[URL\](.*?)\[\/URL\]/gi, '$1');
 
     // Ignore messages from ourselves (the bot)
     if (userClid === bot.ts3ClientId) return;
