@@ -39,8 +39,8 @@ export const musicBotsApi = {
   playerWidgetToken: (id: number) => api.get(`/music-bots/${id}/player-widget-token`).then((r) => r.data),
 
   // Video Streaming
-  startStream: (id: number, source: string, preset?: string) =>
-    api.post(`/music-bots/${id}/stream/start`, { source, preset }).then((r) => r.data),
+  startStream: (id: number, source: string, preset?: string, framerate?: number, bitrate?: string) =>
+    api.post(`/music-bots/${id}/stream/start`, { source, preset, framerate, bitrate }).then((r) => r.data),
   stopStream: (id: number) => api.post(`/music-bots/${id}/stream/stop`).then((r) => r.data),
   setStreamSource: (id: number, source: string) =>
     api.post(`/music-bots/${id}/stream/source`, { source }).then((r) => r.data),

@@ -25,6 +25,12 @@ const PRESETS = [
   { value: '1080p', label: '1080p (1920x1080, 4.5 Mbps)' },
 ];
 
+const FPS_OPTIONS = [
+  { value: '24', label: '24 FPS' },
+  { value: '30', label: '30 FPS' },
+  { value: '60', label: '60 FPS' },
+];
+
 interface VideoStreamTabProps {
   botId: number;
   botStatus: string;
@@ -33,6 +39,8 @@ interface VideoStreamTabProps {
 export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
   const [sourceUrl, setSourceUrl] = useState('');
   const [preset, setPreset] = useState('720p');
+  const [framerate, setFramerate] = useState('30');
+  const [bitrate, setBitrate] = useState('2500k');
 
   const { data: streamStatus } = useVideoStreamStatus(botId);
   const startStream = useStartVideoStream();
@@ -45,7 +53,13 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
 
   const handleStart = () => {
     if (!sourceUrl.trim()) return;
-    startStream.mutate({ botId, source: sourceUrl.trim(), preset });
+    startStream.mutate({
+      botId,
+      source: sourceUrl.trim(),
+      preset,
+      framerate: Number(framerate),
+      bitrate: bitrate.trim(),
+    });
   };
 
   const handleStop = () => {
@@ -117,19 +131,48 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
               </div>
 
               {!isStreaming && (
-                <div className="space-y-2">
-                  <Label>Quality Preset</Label>
-                  <div className="flex gap-2">
-                    {PRESETS.map((p) => (
-                      <Button
-                        key={p.value}
-                        variant={preset === p.value ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPreset(p.value)}
-                      >
-                        {p.value}
-                      </Button>
-                    ))}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Quality Preset</Label>
+                    <div className="flex gap-2">
+                      {PRESETS.map((p) => (
+                        <Button
+                          key={p.value}
+                          variant={preset === p.value ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setPreset(p.value)}
+                        >
+                          {p.value}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Frame Rate (FPS)</Label>
+                    <div className="flex gap-2">
+                      {FPS_OPTIONS.map((fps) => (
+                        <Button
+                          key={fps.value}
+                          variant={framerate === fps.value ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setFramerate(fps.value)}
+                        >
+                          {fps.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Video Bitrate</Label>
+                    <Input
+                      value={bitrate}
+                      onChange={(e) => setBitrate(e.target.value)}
+                      placeholder="e.g. 1500k, 2500k, 4500k"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Examples: 1500k, 2500k, 4500k, 6000k
+                    </p>
                   </div>
                 </div>
               )}
@@ -176,6 +219,8 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
             {isStreaming && streamStatus && (
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
                 <span>Preset: <strong>{streamStatus.preset}</strong></span>
+                <span>FPS: <strong>{streamStatus.framerate}</strong></span>
+                <span>Bitrate: <strong>{streamStatus.bitrate}</strong></span>
                 {streamStatus.source && (
                   <span className="truncate max-w-xs">
                     Source: <strong>{streamStatus.source}</strong>
